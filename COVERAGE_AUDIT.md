@@ -1,10 +1,10 @@
 # mpsgraph-rs coverage audit (vs MacOSX26.2.sdk)
 
 SDK_PUBLIC_SYMBOLS: 90
-VERIFIED: 33
-GAPS: 57
+VERIFIED: 47
+GAPS: 43
 EXEMPT: 0
-COVERAGE_PCT: 36.67%
+COVERAGE_PCT: 52.22%
 
 Scope: top-level Objective-C interfaces/categories and enum types from `MetalPerformanceShadersGraph.framework/Headers`, filtered for macOS availability. This framework exposes no top-level `FOUNDATION_EXPORT`, `extern const`, or free C function declarations in the audited headers.
 
@@ -33,6 +33,11 @@ Scope: top-level Objective-C interfaces/categories and enum types from `MetalPer
 | `MPSGraphDeploymentPlatform` | enum | `MPSGraphExecutable.h` | `deployment_platform` module; `ExecutableSerializationDescriptor::deployment_platform` / `set_deployment_platform`. |
 | `MPSGraphExecutableSerializationDescriptor` | interface | `MPSGraphExecutable.h` | `ExecutableSerializationDescriptor` in `src/execution.rs`. |
 | `MPSGraphExecutable` | interface | `MPSGraphExecutable.h` | `Executable` in `src/graph.rs` plus specialization/output-type/package APIs in `src/execution.rs`. |
+| `MPSGraph(CallOp)` | category | `MPSGraphCallOps.h` | `Graph::call` in `src/call.rs` plus `CompilationDescriptor::set_callable` in `src/execution.rs`. |
+| `MPSGraph(MPSGraphControlFlowOps)` | category | `MPSGraphControlFlowOps.h` | `Graph::{control_dependency,if_then,if_then_else,while_loop,for_loop,for_loop_iterations}` in `src/control_flow.rs`. |
+| `MPSGraph(GatherNDOps)` | category | `MPSGraphGatherOps.h` | `Graph::gather_nd` in `src/gather.rs`. |
+| `MPSGraph(GatherOps)` | category | `MPSGraphGatherOps.h` | `Graph::gather` in `src/gather.rs`. |
+| `MPSGraph(MPSGraphGatherAlongAxisOps)` | category | `MPSGraphGatherOps.h` | `Graph::{gather_along_axis,gather_along_axis_tensor}` in `src/gather.rs`. |
 | `MPSGraph(MPSGraphMatrixMultiplicationOps)` | category | `MPSGraphMatrixMultiplicationOps.h` | `Graph::matrix_multiplication` in `src/graph.rs`. |
 | `MPSGraph(MemoryOps)` | category | `MPSGraphMemoryOps.h` | `Graph::{placeholder,constant_bytes,constant_f32_slice,constant_scalar,constant_scalar_shaped}` in `src/graph.rs`. |
 | `MPSGraph(MPSGraphNormalizationOps)` | category | `MPSGraphNormalizationOps.h` | `Graph::normalize` in `src/graph.rs`. |
@@ -40,6 +45,15 @@ Scope: top-level Objective-C interfaces/categories and enum types from `MetalPer
 | `MPSGraphPooling2DOpDescriptor` | interface | `MPSGraphPoolingOps.h` | `Pooling2DDescriptor` / `Pooling2DDescriptorInfo` in `src/graph.rs`. |
 | `MPSGraph(MPSGraphPoolingOps)` | category | `MPSGraphPoolingOps.h` | `Graph::max_pooling2d` in `src/graph.rs`. |
 | `MPSGraph(MPSGraphReductionOps)` | category | `MPSGraphReductionOps.h` | `Graph::{reduction_sum,reduction_maximum,reduction_minimum,mean}` in `src/graph.rs` plus `Graph::{reduce_axis,reduce_axes}` in `src/ops.rs`. |
+| `MPSGraphRandomDistribution` | enum | `MPSGraphRandomOps.h` | `random_distribution` module plus `RandomOpDescriptor::distribution` / `set_distribution` in `src/random.rs`. |
+| `MPSGraphRandomNormalSamplingMethod` | enum | `MPSGraphRandomOps.h` | `random_normal_sampling_method` module plus `RandomOpDescriptor::sampling_method` / `set_sampling_method` in `src/random.rs`. |
+| `MPSGraphRandomOpDescriptor` | interface | `MPSGraphRandomOps.h` | `RandomOpDescriptor` in `src/random.rs`. |
+| `MPSGraph(MPSGraphRandomOps)` | category | `MPSGraphRandomOps.h` | `Graph::{random_philox_state_seed,random_philox_state_counter,random_tensor,random_tensor_shape_tensor,random_tensor_seed,random_tensor_state,dropout,dropout_tensor}` in `src/random.rs`. |
+| `MPSGraphRNNActivation` | enum | `MPSGraphRNNOps.h` | `rnn_activation` module plus RNN descriptor activation accessors in `src/rnn.rs`. |
+| `MPSGraphSingleGateRNNDescriptor` | interface | `MPSGraphRNNOps.h` | `SingleGateRNNDescriptor` in `src/rnn.rs`. |
+| `MPSGraphLSTMDescriptor` | interface | `MPSGraphRNNOps.h` | `LSTMDescriptor` in `src/rnn.rs`. |
+| `MPSGraphGRUDescriptor` | interface | `MPSGraphRNNOps.h` | `GRUDescriptor` in `src/rnn.rs`. |
+| `MPSGraph(MPSGraphRNNOps)` | category | `MPSGraphRNNOps.h` | `Graph::{single_gate_rnn,lstm,gru}` in `src/rnn.rs`. |
 | `MPSGraphTensor` | interface | `MPSGraphTensor.h` | `Tensor` in `src/graph.rs` plus `shape` / `data_type` / `operation` accessors in `src/types.rs`. |
 | `MPSGraphTensorData` | interface | `MPSGraphTensorData.h` | `TensorData` in `src/data.rs`. |
 | `MPSGraph(MPSGraphTensorShapeOps)` | category | `MPSGraphTensorShapeOps.h` | `Graph::{reshape,transpose,slice,broadcast}` in `src/graph.rs` plus concat/split/stack/pad in `src/ops.rs`. |
@@ -49,8 +63,6 @@ Scope: top-level Objective-C interfaces/categories and enum types from `MetalPer
 | Symbol | Kind | Header | Notes |
 | --- | --- | --- | --- |
 | `MPSGraphExecutionStage` | enum | `MPSGraph.h` | Shared-event signaling/waiting APIs are not wrapped, so the execution-stage enum is unreachable. |
-| `MPSGraph(CallOp)` | category | `MPSGraphCallOps.h` | Callable / symbol-dispatch graph APIs are not wrapped. |
-| `MPSGraph(MPSGraphControlFlowOps)` | category | `MPSGraphControlFlowOps.h` | Graph control-flow builders (`if` / `while` / `for`) are not wrapped. |
 | `MPSGraphConvolution3DOpDescriptor` | interface | `MPSGraphConvolutionOps.h` | Only the 2D convolution descriptor/path is wrapped. |
 | `MPSGraph(MPSGraphConvolutionTransposeOps)` | category | `MPSGraphConvolutionTransposeOps.h` | Transpose-convolution APIs are not wrapped. |
 | `MPSGraphObject` | interface | `MPSGraphCore.h` | The common Objective-C base class is not exposed as a standalone Rust type. |
@@ -63,9 +75,6 @@ Scope: top-level Objective-C interfaces/categories and enum types from `MetalPer
 | `MPSGraphFFTScalingMode` | enum | `MPSGraphFourierTransformOps.h` | FFT APIs are not wrapped. |
 | `MPSGraphFFTDescriptor` | interface | `MPSGraphFourierTransformOps.h` | FFT APIs are not wrapped. |
 | `MPSGraph(MPSGraphFourierTransformOps)` | category | `MPSGraphFourierTransformOps.h` | FFT APIs are not wrapped. |
-| `MPSGraph(GatherNDOps)` | category | `MPSGraphGatherOps.h` | Gather / GatherND APIs are not wrapped. |
-| `MPSGraph(GatherOps)` | category | `MPSGraphGatherOps.h` | Gather / GatherND APIs are not wrapped. |
-| `MPSGraph(MPSGraphGatherAlongAxisOps)` | category | `MPSGraphGatherOps.h` | Gather / GatherND APIs are not wrapped. |
 | `MPSGraphImToColOpDescriptor` | interface | `MPSGraphImToColOps.h` | Im2Col/Col2Im APIs are not wrapped. |
 | `MPSGraph(MPSGraphImToColOps)` | category | `MPSGraphImToColOps.h` | Im2Col / Col2Im APIs are not wrapped. |
 | `MPSGraph(MPSGraphLinearAlgebraOps)` | category | `MPSGraphLinearAlgebraOps.h` | Linear-algebra helpers beyond plain matmul are not wrapped. |
@@ -81,15 +90,6 @@ Scope: top-level Objective-C interfaces/categories and enum types from `MetalPer
 | `MPSGraphPoolingReturnIndicesMode` | enum | `MPSGraphPoolingOps.h` | Only plain max-pooling is wrapped; return-indices pooling modes are not surfaced. |
 | `MPSGraphPooling4DOpDescriptor` | interface | `MPSGraphPoolingOps.h` | Only the 2D pooling descriptor/path is wrapped. |
 | `MPSGraph(MPSGraphQuantizationOps)` | category | `MPSGraphQuantizationOps.h` | Quantize/dequantize APIs are not wrapped. |
-| `MPSGraphRNNActivation` | enum | `MPSGraphRNNOps.h` | RNN/LSTM/GRU APIs are not wrapped. |
-| `MPSGraphSingleGateRNNDescriptor` | interface | `MPSGraphRNNOps.h` | RNN/LSTM/GRU APIs are not wrapped. |
-| `MPSGraphLSTMDescriptor` | interface | `MPSGraphRNNOps.h` | RNN/LSTM/GRU APIs are not wrapped. |
-| `MPSGraphGRUDescriptor` | interface | `MPSGraphRNNOps.h` | RNN/LSTM/GRU APIs are not wrapped. |
-| `MPSGraph(MPSGraphRNNOps)` | category | `MPSGraphRNNOps.h` | RNN/LSTM/GRU APIs are not wrapped. |
-| `MPSGraphRandomDistribution` | enum | `MPSGraphRandomOps.h` | Random/dropout APIs are not wrapped. |
-| `MPSGraphRandomNormalSamplingMethod` | enum | `MPSGraphRandomOps.h` | Random/dropout APIs are not wrapped. |
-| `MPSGraphRandomOpDescriptor` | interface | `MPSGraphRandomOps.h` | Random/dropout APIs are not wrapped. |
-| `MPSGraph(MPSGraphRandomOps)` | category | `MPSGraphRandomOps.h` | Random/dropout APIs are not wrapped. |
 | `MPSGraphResizeMode` | enum | `MPSGraphResizeOps.h` | Resize APIs are not wrapped. |
 | `MPSGraphResizeNearestRoundingMode` | enum | `MPSGraphResizeOps.h` | Resize-nearest APIs are not wrapped. |
 | `MPSGraph(MPSGraphResizeOps)` | category | `MPSGraphResizeOps.h` | Resize APIs are not wrapped. |

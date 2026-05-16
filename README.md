@@ -36,7 +36,7 @@ let values = results[0].read_f32().expect("read result");
 assert_eq!(values, vec![2.0, 0.0, 4.0, 0.0]);
 ```
 
-## v0.2 surface
+## v0.2.1 surface
 
 - Core wrappers for `Graph`, `Tensor`, `TensorData`, `Executable`, `Feed`, and `FeedDescription`
 - Metadata and descriptor coverage for `GraphDevice`, `ShapedType`, `Operation`, `CompilationDescriptor`, `ExecutionDescriptor`, `ExecutableExecutionDescriptor`, and `ExecutableSerializationDescriptor`
@@ -50,8 +50,13 @@ assert_eq!(values, vec![2.0, 0.0, 4.0, 0.0]);
   - shape ops (`reshape`, `transpose`/`permute`, `slice`, `broadcast`, `concat`, `split`, `stack`, `pad`)
   - reductions (existing sum/max/min/mean plus axis/axes sum/max/min/product)
   - `topK`
+  - call ops via `Graph::call` plus `CompilationDescriptor::set_callable`
+  - control-flow builders for control dependencies, `if`/`then`/`else`, `while`, and `for`
+  - gather ops (`gather`, `gatherND`, `gatherAlongAxis`, `gatherAlongAxisTensor`)
+  - descriptor-driven random ops (`RandomOpDescriptor`, seeded/stateful random tensors, dropout)
+  - recurrent layers (`singleGateRNN`, `LSTM`, `GRU`) plus descriptor wrappers
   - 2D convolution, max pooling, and normalization helpers
-- Shared constants for `MPSDataType`, `MPSGraphTensorNamedDataLayout`, `MPSGraphPaddingStyle`, graph options, optimization levels, and deployment platform values
+- Shared constants for `MPSDataType`, `MPSGraphTensorNamedDataLayout`, `MPSGraphPaddingStyle`, graph options, optimization levels, deployment platform values, random distributions, random sampling modes, and RNN activations
 
 This crate still covers a subset of the full SDK. See [`COVERAGE.md`](COVERAGE.md) for the audited header-by-header status and deferred areas.
 
@@ -63,4 +68,6 @@ cargo run --example 02_compile_matmul
 cargo run --example 03_arithmetic_topk
 cargo run --example 04_descriptor_compile
 cargo run --example 05_concat_split
+cargo run --example 06_control_flow_call
+cargo run --example 07_gather_random_rnn
 ```

@@ -174,6 +174,31 @@ public func mpsgraph_compilation_descriptor_set_reduced_precision_fast_math(
     return true
 }
 
+@_cdecl("mpsgraph_compilation_descriptor_set_callable")
+public func mpsgraph_compilation_descriptor_set_callable(
+    _ handle: UnsafeMutableRawPointer?,
+    _ symbolName: UnsafePointer<CChar>?,
+    _ executableHandle: UnsafeMutableRawPointer?
+) -> Bool {
+    guard #available(macOS 14.1, *) else {
+        return false
+    }
+    guard let handle, let symbolName else {
+        return false
+    }
+    let descriptor: MPSGraphCompilationDescriptor = mpsgraph_borrow(handle)
+    let symbol = String(cString: symbolName)
+    var callables = descriptor.callables ?? [:]
+    if let executableHandle {
+        let executable: MPSGraphExecutable = mpsgraph_borrow(executableHandle)
+        callables[symbol] = executable
+    } else {
+        callables.removeValue(forKey: symbol)
+    }
+    descriptor.callables = callables.isEmpty ? nil : callables
+    return true
+}
+
 @_cdecl("mpsgraph_execution_descriptor_new")
 public func mpsgraph_execution_descriptor_new() -> UnsafeMutableRawPointer? {
     mpsgraph_retain(MPSGraphExecutionDescriptor())

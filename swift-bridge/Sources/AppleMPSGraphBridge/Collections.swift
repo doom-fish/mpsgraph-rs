@@ -34,6 +34,17 @@ func mpsgraph_tensor_array_box(_ values: [MPSGraphTensor]?) -> UnsafeMutableRawP
 }
 
 @inline(__always)
+func mpsgraph_take_tensor_array_box(_ handle: UnsafeMutableRawPointer?) -> [MPSGraphTensor]? {
+    guard let handle else {
+        return nil
+    }
+    let box: MPSGraphTensorArrayBox = mpsgraph_borrow(handle)
+    let values = box.values
+    mpsgraph_release(handle, as: MPSGraphTensorArrayBox.self)
+    return values
+}
+
+@inline(__always)
 func mpsgraph_tensor_data_array_box(_ values: [MPSGraphTensorData]?) -> UnsafeMutableRawPointer? {
     guard let values else {
         return nil
@@ -47,6 +58,17 @@ func mpsgraph_shaped_type_array_box(_ values: [MPSGraphShapedType]?) -> UnsafeMu
         return nil
     }
     return mpsgraph_retain(MPSGraphShapedTypeArrayBox(values))
+}
+
+@_cdecl("mpsgraph_tensor_array_box_new")
+public func mpsgraph_tensor_array_box_new(
+    _ handles: UnsafePointer<UnsafeMutableRawPointer?>?,
+    _ count: Int
+) -> UnsafeMutableRawPointer? {
+    guard let tensors = mpsgraph_tensor_array(handles, count: count) else {
+        return nil
+    }
+    return mpsgraph_tensor_array_box(tensors)
 }
 
 @_cdecl("mpsgraph_tensor_array_box_len")

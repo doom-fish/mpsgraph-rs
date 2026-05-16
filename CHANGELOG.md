@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.1 - 2026-05-16
+
+- Added call-op support via `Graph::call` and `CompilationDescriptor::set_callable`
+- Added control-flow builders for control dependencies, `if`/`then`/`else`, `while`, and `for`
+- Added gather, random/dropout, and recurrent-op bindings plus descriptor wrappers for random and RNN APIs
+- Added advanced integration tests and new smoke examples covering call/control-flow and gather/random/RNN surfaces
+
 ## 0.2.0 - 2026-05-16
 
 - Added `MPSGraphDevice`, `MPSGraphShapedType`, tensor metadata, and tensor-data device introspection wrappers

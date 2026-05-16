@@ -5,16 +5,22 @@
 #![allow(clippy::module_name_repetitions)]
 #![allow(clippy::must_use_candidate)]
 
+pub mod call;
+pub mod control_flow;
 pub mod data;
 pub mod error;
 pub mod execution;
 pub mod ffi;
+pub mod gather;
 pub mod graph;
 pub mod ops;
+pub mod random;
+pub mod rnn;
 pub mod types;
 
 pub use crate::data::TensorData;
 pub use crate::error::{Error, Result};
+pub use crate::control_flow::WhileBeforeResult;
 pub use crate::execution::{
     deployment_platform, graph_options, optimization, optimization_profile,
     reduced_precision_fast_math, CompilationDescriptor, ExecutableExecutionDescriptor,
@@ -26,4 +32,10 @@ pub use crate::graph::{
     Pooling2DDescriptorInfo, Tensor,
 };
 pub use crate::ops::{BinaryArithmeticOp, ReductionAxesOp, ReductionAxisOp, UnaryArithmeticOp};
+pub use crate::random::{
+    random_distribution, random_normal_sampling_method, RandomOpDescriptor,
+};
+pub use crate::rnn::{
+    rnn_activation, GRUDescriptor, LSTMDescriptor, SingleGateRNNDescriptor,
+};
 pub use crate::types::{graph_device_type, GraphDevice, Operation, ShapedType};

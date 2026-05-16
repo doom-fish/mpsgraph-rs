@@ -175,6 +175,25 @@ impl CompilationDescriptor {
             Err(Error::OperationFailed("failed to set reducedPrecisionFastMath"))
         }
     }
+
+    pub fn set_callable(&self, symbol_name: &str, executable: Option<&Executable>) -> Result<()> {
+        let symbol_name =
+            CString::new(symbol_name).map_err(|_| Error::OperationFailed("call symbol name contained NUL"))?;
+        let executable_ptr = executable.map_or(ptr::null_mut(), Executable::as_ptr);
+        // SAFETY: all handles remain valid for the duration of the call.
+        let ok = unsafe {
+            ffi::mpsgraph_compilation_descriptor_set_callable(
+                self.ptr,
+                symbol_name.as_ptr(),
+                executable_ptr,
+            )
+        };
+        if ok {
+            Ok(())
+        } else {
+            Err(Error::OperationFailed("failed to set compilation descriptor callable"))
+        }
+    }
 }
 
 /// Safe owner for `MPSGraphExecutionDescriptor`.

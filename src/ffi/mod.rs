@@ -1,5 +1,19 @@
 use core::ffi::{c_char, c_void};
 
+pub type TensorArrayCallback = unsafe extern "C" fn(context: *mut c_void) -> *mut c_void;
+pub type TensorArrayInputCallback =
+    unsafe extern "C" fn(context: *mut c_void, input_box_handle: *mut c_void) -> *mut c_void;
+pub type WhileBeforeCallback = unsafe extern "C" fn(
+    context: *mut c_void,
+    input_box_handle: *mut c_void,
+    out_result_box_handle: *mut *mut c_void,
+) -> *mut c_void;
+pub type ForBodyCallback = unsafe extern "C" fn(
+    context: *mut c_void,
+    index_handle: *mut c_void,
+    input_box_handle: *mut c_void,
+) -> *mut c_void;
+
 unsafe extern "C" {
     pub fn mpsgraph_object_release(handle: *mut c_void);
 
@@ -556,6 +570,298 @@ unsafe extern "C" {
         graph_handle: *mut c_void,
         source_handle: *mut c_void,
         k_tensor_handle: *mut c_void,
+        name: *const c_char,
+    ) -> *mut c_void;
+    pub fn mpsgraph_tensor_array_box_new(
+        handles: *const *mut c_void,
+        count: usize,
+    ) -> *mut c_void;
+    pub fn mpsgraph_compilation_descriptor_set_callable(
+        handle: *mut c_void,
+        symbol_name: *const c_char,
+        executable_handle: *mut c_void,
+    ) -> bool;
+    pub fn mpsgraph_graph_call_symbol(
+        graph_handle: *mut c_void,
+        symbol_name: *const c_char,
+        input_handles: *const *mut c_void,
+        input_count: usize,
+        output_type_handles: *const *mut c_void,
+        output_type_count: usize,
+        name: *const c_char,
+    ) -> *mut c_void;
+    pub fn mpsgraph_graph_gather_nd(
+        graph_handle: *mut c_void,
+        updates_tensor_handle: *mut c_void,
+        indices_tensor_handle: *mut c_void,
+        batch_dimensions: usize,
+        name: *const c_char,
+    ) -> *mut c_void;
+    pub fn mpsgraph_graph_gather(
+        graph_handle: *mut c_void,
+        updates_tensor_handle: *mut c_void,
+        indices_tensor_handle: *mut c_void,
+        axis: usize,
+        batch_dimensions: usize,
+        name: *const c_char,
+    ) -> *mut c_void;
+    pub fn mpsgraph_graph_gather_along_axis(
+        graph_handle: *mut c_void,
+        axis: isize,
+        updates_tensor_handle: *mut c_void,
+        indices_tensor_handle: *mut c_void,
+        name: *const c_char,
+    ) -> *mut c_void;
+    pub fn mpsgraph_graph_gather_along_axis_tensor(
+        graph_handle: *mut c_void,
+        axis_tensor_handle: *mut c_void,
+        updates_tensor_handle: *mut c_void,
+        indices_tensor_handle: *mut c_void,
+        name: *const c_char,
+    ) -> *mut c_void;
+    pub fn mpsgraph_random_op_descriptor_new(distribution: u64, data_type: u32) -> *mut c_void;
+    pub fn mpsgraph_random_op_descriptor_distribution(handle: *mut c_void) -> u64;
+    pub fn mpsgraph_random_op_descriptor_set_distribution(handle: *mut c_void, raw_value: u64)
+    -> bool;
+    pub fn mpsgraph_random_op_descriptor_data_type(handle: *mut c_void) -> u32;
+    pub fn mpsgraph_random_op_descriptor_set_data_type(handle: *mut c_void, raw_value: u32)
+    -> bool;
+    pub fn mpsgraph_random_op_descriptor_min(handle: *mut c_void) -> f32;
+    pub fn mpsgraph_random_op_descriptor_set_min(handle: *mut c_void, value: f32) -> bool;
+    pub fn mpsgraph_random_op_descriptor_max(handle: *mut c_void) -> f32;
+    pub fn mpsgraph_random_op_descriptor_set_max(handle: *mut c_void, value: f32) -> bool;
+    pub fn mpsgraph_random_op_descriptor_min_integer(handle: *mut c_void) -> isize;
+    pub fn mpsgraph_random_op_descriptor_set_min_integer(handle: *mut c_void, value: isize)
+    -> bool;
+    pub fn mpsgraph_random_op_descriptor_max_integer(handle: *mut c_void) -> isize;
+    pub fn mpsgraph_random_op_descriptor_set_max_integer(handle: *mut c_void, value: isize)
+    -> bool;
+    pub fn mpsgraph_random_op_descriptor_mean(handle: *mut c_void) -> f32;
+    pub fn mpsgraph_random_op_descriptor_set_mean(handle: *mut c_void, value: f32) -> bool;
+    pub fn mpsgraph_random_op_descriptor_standard_deviation(handle: *mut c_void) -> f32;
+    pub fn mpsgraph_random_op_descriptor_set_standard_deviation(
+        handle: *mut c_void,
+        value: f32,
+    ) -> bool;
+    pub fn mpsgraph_random_op_descriptor_sampling_method(handle: *mut c_void) -> u64;
+    pub fn mpsgraph_random_op_descriptor_set_sampling_method(handle: *mut c_void, raw_value: u64)
+    -> bool;
+    pub fn mpsgraph_graph_random_philox_state_seed(
+        graph_handle: *mut c_void,
+        seed: usize,
+        name: *const c_char,
+    ) -> *mut c_void;
+    pub fn mpsgraph_graph_random_philox_state_counter(
+        graph_handle: *mut c_void,
+        counter_low: usize,
+        counter_high: usize,
+        key: usize,
+        name: *const c_char,
+    ) -> *mut c_void;
+    pub fn mpsgraph_graph_random_tensor(
+        graph_handle: *mut c_void,
+        shape: *const usize,
+        shape_len: usize,
+        descriptor_handle: *mut c_void,
+        name: *const c_char,
+    ) -> *mut c_void;
+    pub fn mpsgraph_graph_random_tensor_shape_tensor(
+        graph_handle: *mut c_void,
+        shape_tensor_handle: *mut c_void,
+        descriptor_handle: *mut c_void,
+        name: *const c_char,
+    ) -> *mut c_void;
+    pub fn mpsgraph_graph_random_tensor_seed(
+        graph_handle: *mut c_void,
+        shape: *const usize,
+        shape_len: usize,
+        descriptor_handle: *mut c_void,
+        seed: usize,
+        name: *const c_char,
+    ) -> *mut c_void;
+    pub fn mpsgraph_graph_random_tensor_shape_tensor_seed(
+        graph_handle: *mut c_void,
+        shape_tensor_handle: *mut c_void,
+        descriptor_handle: *mut c_void,
+        seed: usize,
+        name: *const c_char,
+    ) -> *mut c_void;
+    pub fn mpsgraph_graph_random_tensor_state(
+        graph_handle: *mut c_void,
+        shape: *const usize,
+        shape_len: usize,
+        descriptor_handle: *mut c_void,
+        state_handle: *mut c_void,
+        name: *const c_char,
+    ) -> *mut c_void;
+    pub fn mpsgraph_graph_random_tensor_shape_tensor_state(
+        graph_handle: *mut c_void,
+        shape_tensor_handle: *mut c_void,
+        descriptor_handle: *mut c_void,
+        state_handle: *mut c_void,
+        name: *const c_char,
+    ) -> *mut c_void;
+    pub fn mpsgraph_graph_dropout(
+        graph_handle: *mut c_void,
+        tensor_handle: *mut c_void,
+        rate: f64,
+        name: *const c_char,
+    ) -> *mut c_void;
+    pub fn mpsgraph_graph_dropout_tensor(
+        graph_handle: *mut c_void,
+        tensor_handle: *mut c_void,
+        rate_tensor_handle: *mut c_void,
+        name: *const c_char,
+    ) -> *mut c_void;
+    pub fn mpsgraph_single_gate_rnn_descriptor_new() -> *mut c_void;
+    pub fn mpsgraph_single_gate_rnn_descriptor_reverse(handle: *mut c_void) -> bool;
+    pub fn mpsgraph_single_gate_rnn_descriptor_set_reverse(handle: *mut c_void, value: bool)
+    -> bool;
+    pub fn mpsgraph_single_gate_rnn_descriptor_bidirectional(handle: *mut c_void) -> bool;
+    pub fn mpsgraph_single_gate_rnn_descriptor_set_bidirectional(handle: *mut c_void, value: bool)
+    -> bool;
+    pub fn mpsgraph_single_gate_rnn_descriptor_training(handle: *mut c_void) -> bool;
+    pub fn mpsgraph_single_gate_rnn_descriptor_set_training(handle: *mut c_void, value: bool)
+    -> bool;
+    pub fn mpsgraph_single_gate_rnn_descriptor_activation(handle: *mut c_void) -> usize;
+    pub fn mpsgraph_single_gate_rnn_descriptor_set_activation(handle: *mut c_void, value: usize)
+    -> bool;
+    pub fn mpsgraph_lstm_descriptor_new() -> *mut c_void;
+    pub fn mpsgraph_lstm_descriptor_reverse(handle: *mut c_void) -> bool;
+    pub fn mpsgraph_lstm_descriptor_set_reverse(handle: *mut c_void, value: bool) -> bool;
+    pub fn mpsgraph_lstm_descriptor_bidirectional(handle: *mut c_void) -> bool;
+    pub fn mpsgraph_lstm_descriptor_set_bidirectional(handle: *mut c_void, value: bool) -> bool;
+    pub fn mpsgraph_lstm_descriptor_produce_cell(handle: *mut c_void) -> bool;
+    pub fn mpsgraph_lstm_descriptor_set_produce_cell(handle: *mut c_void, value: bool) -> bool;
+    pub fn mpsgraph_lstm_descriptor_training(handle: *mut c_void) -> bool;
+    pub fn mpsgraph_lstm_descriptor_set_training(handle: *mut c_void, value: bool) -> bool;
+    pub fn mpsgraph_lstm_descriptor_forget_gate_last(handle: *mut c_void) -> bool;
+    pub fn mpsgraph_lstm_descriptor_set_forget_gate_last(handle: *mut c_void, value: bool)
+    -> bool;
+    pub fn mpsgraph_lstm_descriptor_input_gate_activation(handle: *mut c_void) -> usize;
+    pub fn mpsgraph_lstm_descriptor_set_input_gate_activation(
+        handle: *mut c_void,
+        value: usize,
+    ) -> bool;
+    pub fn mpsgraph_lstm_descriptor_forget_gate_activation(handle: *mut c_void) -> usize;
+    pub fn mpsgraph_lstm_descriptor_set_forget_gate_activation(
+        handle: *mut c_void,
+        value: usize,
+    ) -> bool;
+    pub fn mpsgraph_lstm_descriptor_cell_gate_activation(handle: *mut c_void) -> usize;
+    pub fn mpsgraph_lstm_descriptor_set_cell_gate_activation(handle: *mut c_void, value: usize)
+    -> bool;
+    pub fn mpsgraph_lstm_descriptor_output_gate_activation(handle: *mut c_void) -> usize;
+    pub fn mpsgraph_lstm_descriptor_set_output_gate_activation(
+        handle: *mut c_void,
+        value: usize,
+    ) -> bool;
+    pub fn mpsgraph_lstm_descriptor_activation(handle: *mut c_void) -> usize;
+    pub fn mpsgraph_lstm_descriptor_set_activation(handle: *mut c_void, value: usize) -> bool;
+    pub fn mpsgraph_gru_descriptor_new() -> *mut c_void;
+    pub fn mpsgraph_gru_descriptor_reverse(handle: *mut c_void) -> bool;
+    pub fn mpsgraph_gru_descriptor_set_reverse(handle: *mut c_void, value: bool) -> bool;
+    pub fn mpsgraph_gru_descriptor_bidirectional(handle: *mut c_void) -> bool;
+    pub fn mpsgraph_gru_descriptor_set_bidirectional(handle: *mut c_void, value: bool) -> bool;
+    pub fn mpsgraph_gru_descriptor_training(handle: *mut c_void) -> bool;
+    pub fn mpsgraph_gru_descriptor_set_training(handle: *mut c_void, value: bool) -> bool;
+    pub fn mpsgraph_gru_descriptor_reset_gate_first(handle: *mut c_void) -> bool;
+    pub fn mpsgraph_gru_descriptor_set_reset_gate_first(handle: *mut c_void, value: bool)
+    -> bool;
+    pub fn mpsgraph_gru_descriptor_reset_after(handle: *mut c_void) -> bool;
+    pub fn mpsgraph_gru_descriptor_set_reset_after(handle: *mut c_void, value: bool) -> bool;
+    pub fn mpsgraph_gru_descriptor_flip_z(handle: *mut c_void) -> bool;
+    pub fn mpsgraph_gru_descriptor_set_flip_z(handle: *mut c_void, value: bool) -> bool;
+    pub fn mpsgraph_gru_descriptor_update_gate_activation(handle: *mut c_void) -> usize;
+    pub fn mpsgraph_gru_descriptor_set_update_gate_activation(handle: *mut c_void, value: usize)
+    -> bool;
+    pub fn mpsgraph_gru_descriptor_reset_gate_activation(handle: *mut c_void) -> usize;
+    pub fn mpsgraph_gru_descriptor_set_reset_gate_activation(handle: *mut c_void, value: usize)
+    -> bool;
+    pub fn mpsgraph_gru_descriptor_output_gate_activation(handle: *mut c_void) -> usize;
+    pub fn mpsgraph_gru_descriptor_set_output_gate_activation(handle: *mut c_void, value: usize)
+    -> bool;
+    pub fn mpsgraph_graph_single_gate_rnn(
+        graph_handle: *mut c_void,
+        source_handle: *mut c_void,
+        recurrent_weight_handle: *mut c_void,
+        input_weight_handle: *mut c_void,
+        bias_handle: *mut c_void,
+        init_state_handle: *mut c_void,
+        mask_handle: *mut c_void,
+        descriptor_handle: *mut c_void,
+        name: *const c_char,
+    ) -> *mut c_void;
+    pub fn mpsgraph_graph_lstm(
+        graph_handle: *mut c_void,
+        source_handle: *mut c_void,
+        recurrent_weight_handle: *mut c_void,
+        input_weight_handle: *mut c_void,
+        bias_handle: *mut c_void,
+        init_state_handle: *mut c_void,
+        init_cell_handle: *mut c_void,
+        mask_handle: *mut c_void,
+        peephole_handle: *mut c_void,
+        descriptor_handle: *mut c_void,
+        name: *const c_char,
+    ) -> *mut c_void;
+    pub fn mpsgraph_graph_gru(
+        graph_handle: *mut c_void,
+        source_handle: *mut c_void,
+        recurrent_weight_handle: *mut c_void,
+        input_weight_handle: *mut c_void,
+        bias_handle: *mut c_void,
+        init_state_handle: *mut c_void,
+        mask_handle: *mut c_void,
+        secondary_bias_handle: *mut c_void,
+        descriptor_handle: *mut c_void,
+        name: *const c_char,
+    ) -> *mut c_void;
+    pub fn mpsgraph_graph_control_dependency(
+        graph_handle: *mut c_void,
+        operation_handles: *const *mut c_void,
+        operation_count: usize,
+        dependent_callback: Option<TensorArrayCallback>,
+        dependent_context: *mut c_void,
+        name: *const c_char,
+    ) -> *mut c_void;
+    pub fn mpsgraph_graph_if_then_else(
+        graph_handle: *mut c_void,
+        predicate_handle: *mut c_void,
+        then_callback: Option<TensorArrayCallback>,
+        then_context: *mut c_void,
+        else_callback: Option<TensorArrayCallback>,
+        else_context: *mut c_void,
+        name: *const c_char,
+    ) -> *mut c_void;
+    pub fn mpsgraph_graph_while_loop(
+        graph_handle: *mut c_void,
+        input_handles: *const *mut c_void,
+        input_count: usize,
+        before_callback: Option<WhileBeforeCallback>,
+        before_context: *mut c_void,
+        after_callback: Option<TensorArrayInputCallback>,
+        after_context: *mut c_void,
+        name: *const c_char,
+    ) -> *mut c_void;
+    pub fn mpsgraph_graph_for_loop(
+        graph_handle: *mut c_void,
+        lower_bound_handle: *mut c_void,
+        upper_bound_handle: *mut c_void,
+        step_handle: *mut c_void,
+        argument_handles: *const *mut c_void,
+        argument_count: usize,
+        body_callback: Option<ForBodyCallback>,
+        body_context: *mut c_void,
+        name: *const c_char,
+    ) -> *mut c_void;
+    pub fn mpsgraph_graph_for_loop_iterations(
+        graph_handle: *mut c_void,
+        number_of_iterations_handle: *mut c_void,
+        argument_handles: *const *mut c_void,
+        argument_count: usize,
+        body_callback: Option<ForBodyCallback>,
+        body_context: *mut c_void,
         name: *const c_char,
     ) -> *mut c_void;
 }

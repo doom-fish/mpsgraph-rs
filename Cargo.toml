@@ -1,6 +1,6 @@
 [package]
 name = "apple-mpsgraph"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 homepage = "https://github.com/doom-fish/mpsgraph-rs"
@@ -66,3 +66,9 @@ name = "04_descriptor_compile"
 
 [[example]]
 name = "05_concat_split"
+
+[[example]]
+name = "06_control_flow_call"
+
+[[example]]
+name = "07_gather_random_rnn"

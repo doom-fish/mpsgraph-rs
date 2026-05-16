@@ -143,6 +143,27 @@ func mpsgraph_graph_type_array(
 }
 
 @inline(__always)
+func mpsgraph_operation_array(
+    _ handles: UnsafePointer<UnsafeMutableRawPointer?>?,
+    count: Int
+) -> [MPSGraphOperation]? {
+    guard count == 0 || handles != nil else {
+        return nil
+    }
+
+    var operations = [MPSGraphOperation]()
+    operations.reserveCapacity(count)
+    for index in 0..<count {
+        guard let handle = handles![index] else {
+            return nil
+        }
+        let operation: MPSGraphOperation = mpsgraph_borrow(handle)
+        operations.append(operation)
+    }
+    return operations
+}
+
+@inline(__always)
 func mpsgraph_tensor_array(
     _ handles: UnsafePointer<UnsafeMutableRawPointer?>?,
     count: Int
