@@ -36,24 +36,31 @@ let values = results[0].read_f32().expect("read result");
 assert_eq!(values, vec![2.0, 0.0, 4.0, 0.0]);
 ```
 
-## v0.1 surface
+## v0.2 surface
 
-- `Graph`, `Tensor`, and ordered `Feed` / `FeedDescription` helpers
-- `TensorData` from CPU bytes, `f32` slices, or existing `MTLBuffer`s
-- Direct graph execution plus compiled `Executable` runs on `MTLCommandQueue`
-- Core graph construction ops:
+- Core wrappers for `Graph`, `Tensor`, `TensorData`, `Executable`, `Feed`, and `FeedDescription`
+- Metadata and descriptor coverage for `GraphDevice`, `ShapedType`, `Operation`, `CompilationDescriptor`, `ExecutionDescriptor`, `ExecutableExecutionDescriptor`, and `ExecutableSerializationDescriptor`
+- Graph / executable introspection helpers such as `placeholder_tensors`, `feed_tensors`, `target_tensors`, `output_types`, tensor `shape`, tensor `data_type`, and tensor-data `graph_device`
+- Graph construction and execution helpers for:
   - placeholders and constants
-  - addition, subtraction, multiplication, division
   - matrix multiplication
-  - reshape, transpose/permute, slice, broadcast
-  - `reLU`, `sigmoid`, `softMax`
-  - reduction sum / max / min and mean
+  - unary arithmetic (`identity`, exponent/log variants, square/sqrt/reciprocal, abs/neg/sign, rounding, trig/hyperbolic, `isNaN`, `isInfinite`)
+  - binary arithmetic (`+`, `-`, `*`, `/`, `divisionNoNaN`, `power`, min/max, comparisons, logical `and`/`or`, `atan2`, `floorModulo`, `select`)
+  - activations (`reLU`, `leakyReLU`, `sigmoid`, `softMax`) and gradient helpers for `reLU`, `sigmoid`, and `softMax`
+  - shape ops (`reshape`, `transpose`/`permute`, `slice`, `broadcast`, `concat`, `split`, `stack`, `pad`)
+  - reductions (existing sum/max/min/mean plus axis/axes sum/max/min/product)
+  - `topK`
   - 2D convolution, max pooling, and normalization helpers
-- Shared constants for `MPSDataType`, `MPSGraphTensorNamedDataLayout`, and `MPSGraphPaddingStyle`
+- Shared constants for `MPSDataType`, `MPSGraphTensorNamedDataLayout`, `MPSGraphPaddingStyle`, graph options, optimization levels, and deployment platform values
+
+This crate still covers a subset of the full SDK. See [`COVERAGE.md`](COVERAGE.md) for the audited header-by-header status and deferred areas.
 
 ## Smoke examples
 
 ```bash
 cargo run --example 01_add_relu
 cargo run --example 02_compile_matmul
+cargo run --example 03_arithmetic_topk
+cargo run --example 04_descriptor_compile
+cargo run --example 05_concat_split
 ```

@@ -105,6 +105,44 @@ func mpsgraph_graph_device(_ deviceHandle: UnsafeMutableRawPointer) -> MPSGraphD
 }
 
 @inline(__always)
+func mpsgraph_optional_graph_device(_ deviceHandle: UnsafeMutableRawPointer?) -> MPSGraphDevice? {
+    guard let deviceHandle else {
+        return nil
+    }
+    return mpsgraph_graph_device(deviceHandle)
+}
+
+@inline(__always)
+func mpsgraph_optional_signed_shape(_ shape: UnsafePointer<Int>?, _ shapeLen: Int) -> [NSNumber]? {
+    guard let shape else {
+        return nil
+    }
+    return (0..<shapeLen).map { NSNumber(value: shape[$0]) }
+}
+
+@available(macOS 12.0, *)
+@inline(__always)
+func mpsgraph_graph_type_array(
+    _ handles: UnsafePointer<UnsafeMutableRawPointer?>?,
+    count: Int
+) -> [MPSGraphType]? {
+    guard count == 0 || handles != nil else {
+        return nil
+    }
+
+    var values = [MPSGraphType]()
+    values.reserveCapacity(count)
+    for index in 0..<count {
+        guard let handle = handles![index] else {
+            return nil
+        }
+        let value: MPSGraphType = mpsgraph_borrow(handle)
+        values.append(value)
+    }
+    return values
+}
+
+@inline(__always)
 func mpsgraph_tensor_array(
     _ handles: UnsafePointer<UnsafeMutableRawPointer?>?,
     count: Int

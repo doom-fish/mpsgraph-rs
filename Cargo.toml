@@ -1,6 +1,6 @@
 [package]
 name = "apple-mpsgraph"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 homepage = "https://github.com/doom-fish/mpsgraph-rs"
@@ -17,6 +17,8 @@ include = [
     "swift-bridge/Package.swift",
     "swift-bridge/Sources/**/*",
     "examples/**/*",
+    "tests/**/*",
+    "COVERAGE.md",
     "build.rs",
     "Cargo.toml",
     "README.md",
@@ -55,3 +57,12 @@ name = "01_add_relu"
 
 [[example]]
 name = "02_compile_matmul"
+
+[[example]]
+name = "03_arithmetic_topk"
+
+[[example]]
+name = "04_descriptor_compile"
+
+[[example]]
+name = "05_concat_split"

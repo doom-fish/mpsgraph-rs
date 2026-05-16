@@ -349,6 +349,12 @@ impl Pooling2DDescriptor {
 opaque_handle!(Graph);
 opaque_handle!(Tensor);
 
+impl Tensor {
+    pub(crate) const fn from_raw(ptr: *mut c_void) -> Self {
+        Self { ptr }
+    }
+}
+
 impl Graph {
     #[must_use]
     pub fn new() -> Option<Self> {
@@ -740,10 +746,7 @@ impl Graph {
         if ptr.is_null() {
             None
         } else {
-            Some(Executable {
-                ptr,
-                output_count: targets.len(),
-            })
+            Some(Executable::from_raw(ptr, targets.len()))
         }
     }
 }
@@ -768,6 +771,10 @@ impl Drop for Executable {
 }
 
 impl Executable {
+    pub(crate) const fn from_raw(ptr: *mut c_void, output_count: usize) -> Self {
+        Self { ptr, output_count }
+    }
+
     #[must_use]
     pub const fn as_ptr(&self) -> *mut c_void {
         self.ptr

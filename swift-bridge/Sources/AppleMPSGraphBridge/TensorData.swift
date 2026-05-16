@@ -97,3 +97,12 @@ public func mpsgraph_tensor_data_read_bytes(
     tensorData.mpsndarray().readBytes(dst, strideBytes: nil)
     return true
 }
+
+@_cdecl("mpsgraph_tensor_data_device")
+public func mpsgraph_tensor_data_device(_ handle: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer? {
+    guard let handle else {
+        return nil
+    }
+    let tensorData: MPSGraphTensorData = mpsgraph_borrow(handle)
+    return mpsgraph_retain(tensorData.device)
+}
