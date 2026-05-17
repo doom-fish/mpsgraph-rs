@@ -54,6 +54,7 @@ unsafe extern "C" fn zero_arg_tensor_array_trampoline<F>(context: *mut c_void) -
 where
     F: FnMut() -> Vec<Tensor>,
 {
+    // SAFETY: `context` is a pointer to `ZeroArgCallbackContext<'_, F>` set up by the safe wrapper at the callsite.
     let context = unsafe { &mut *context.cast::<ZeroArgCallbackContext<'_, F>>() };
     let tensors = catch_unwind(AssertUnwindSafe(|| (context.callback)()))
         .unwrap_or_else(|_| std::process::abort());
@@ -72,6 +73,7 @@ unsafe extern "C" fn while_before_trampoline<F>(
 where
     F: FnMut(&[Tensor]) -> WhileBeforeResult,
 {
+    // SAFETY: `context` is a pointer to `WhileBeforeCallbackContext<'_, F>` set up by the safe wrapper at the callsite.
     let context = unsafe { &mut *context.cast::<WhileBeforeCallbackContext<'_, F>>() };
     let inputs = collect_owned_tensors(input_box_handle);
     match catch_unwind(AssertUnwindSafe(|| (context.callback)(&inputs))) {
@@ -97,6 +99,7 @@ unsafe extern "C" fn tensor_array_input_trampoline<F>(
 where
     F: FnMut(&[Tensor]) -> Vec<Tensor>,
 {
+    // SAFETY: `context` is a pointer to `TensorArrayInputCallbackContext<'_, F>` set up by the safe wrapper at the callsite.
     let context = unsafe { &mut *context.cast::<TensorArrayInputCallbackContext<'_, F>>() };
     let inputs = collect_owned_tensors(input_box_handle);
     let tensors = catch_unwind(AssertUnwindSafe(|| (context.callback)(&inputs)))
@@ -119,6 +122,7 @@ where
     if index_handle.is_null() {
         return ptr::null_mut();
     }
+    // SAFETY: `context` is a pointer to `ForBodyCallbackContext<'_, F>` set up by the safe wrapper at the callsite.
     let context = unsafe { &mut *context.cast::<ForBodyCallbackContext<'_, F>>() };
     let index = Tensor::from_raw(index_handle);
     let inputs = collect_owned_tensors(input_box_handle);

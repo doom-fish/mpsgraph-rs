@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.5 - 2026-05-17
+
+- Added missing SAFETY comments on context-pointer casts in callback trampolines (`zero_arg_tensor_array_trampoline`, `while_before_trampoline`, `tensor_array_input_trampoline`, `for_body_trampoline`). These unsafe blocks were previously undocumented, improving transparency of the unsafe FFI boundary logic.
+
 ## 0.2.4 - 2026-05-17
 
 - Added `@available(macOS 26.0, *)` declaration attributes to the two Swift bridge thunks that reference `MPSGraphReducedPrecisionFastMath` / `reducedPrecisionFastMath` (`mpsgraph_compilation_descriptor_reduced_precision_fast_math` and `mpsgraph_compilation_descriptor_set_reduced_precision_fast_math`), replacing the previous runtime-only `guard #available` pattern. The bridge now correctly signals macOS 26+ availability at compile time, making it portable to older SDK builds.
