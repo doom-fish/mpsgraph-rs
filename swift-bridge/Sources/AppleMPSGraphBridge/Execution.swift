@@ -144,12 +144,9 @@ public func mpsgraph_compilation_descriptor_set_optimization_profile(
     return true
 }
 
+@available(macOS 26.0, *)
 @_cdecl("mpsgraph_compilation_descriptor_reduced_precision_fast_math")
 public func mpsgraph_compilation_descriptor_reduced_precision_fast_math(_ handle: UnsafeMutableRawPointer?) -> UInt {
-    guard #available(macOS 26.0, *) else {
-            return 0
-        }
-
     guard let handle else {
         return 0
     }
@@ -157,15 +154,12 @@ public func mpsgraph_compilation_descriptor_reduced_precision_fast_math(_ handle
     return descriptor.reducedPrecisionFastMath.rawValue
 }
 
+@available(macOS 26.0, *)
 @_cdecl("mpsgraph_compilation_descriptor_set_reduced_precision_fast_math")
 public func mpsgraph_compilation_descriptor_set_reduced_precision_fast_math(
     _ handle: UnsafeMutableRawPointer?,
     _ rawValue: UInt
 ) -> Bool {
-    guard #available(macOS 26.0, *) else {
-            return false
-        }
-
     guard let handle else {
         return false
     }
