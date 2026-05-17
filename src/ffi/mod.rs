@@ -322,8 +322,9 @@ unsafe extern "C" {
         handle: *mut c_void,
         raw_value: u64,
     ) -> bool;
-    pub fn mpsgraph_compilation_descriptor_reduced_precision_fast_math(handle: *mut c_void)
-    -> usize;
+    pub fn mpsgraph_compilation_descriptor_reduced_precision_fast_math(
+        handle: *mut c_void,
+    ) -> usize;
     pub fn mpsgraph_compilation_descriptor_set_reduced_precision_fast_math(
         handle: *mut c_void,
         raw_value: usize,
@@ -335,7 +336,8 @@ unsafe extern "C" {
         handle: *mut c_void,
         value: bool,
     ) -> bool;
-    pub fn mpsgraph_execution_descriptor_compilation_descriptor(handle: *mut c_void) -> *mut c_void;
+    pub fn mpsgraph_execution_descriptor_compilation_descriptor(handle: *mut c_void)
+        -> *mut c_void;
     pub fn mpsgraph_execution_descriptor_set_compilation_descriptor(
         handle: *mut c_void,
         compilation_descriptor_handle: *mut c_void,
@@ -575,10 +577,7 @@ unsafe extern "C" {
         k_tensor_handle: *mut c_void,
         name: *const c_char,
     ) -> *mut c_void;
-    pub fn mpsgraph_tensor_array_box_new(
-        handles: *const *mut c_void,
-        count: usize,
-    ) -> *mut c_void;
+    pub fn mpsgraph_tensor_array_box_new(handles: *const *mut c_void, count: usize) -> *mut c_void;
     pub fn mpsgraph_compilation_descriptor_set_callable(
         handle: *mut c_void,
         symbol_name: *const c_char,
@@ -624,21 +623,23 @@ unsafe extern "C" {
     ) -> *mut c_void;
     pub fn mpsgraph_random_op_descriptor_new(distribution: u64, data_type: u32) -> *mut c_void;
     pub fn mpsgraph_random_op_descriptor_distribution(handle: *mut c_void) -> u64;
-    pub fn mpsgraph_random_op_descriptor_set_distribution(handle: *mut c_void, raw_value: u64)
-    -> bool;
+    pub fn mpsgraph_random_op_descriptor_set_distribution(
+        handle: *mut c_void,
+        raw_value: u64,
+    ) -> bool;
     pub fn mpsgraph_random_op_descriptor_data_type(handle: *mut c_void) -> u32;
     pub fn mpsgraph_random_op_descriptor_set_data_type(handle: *mut c_void, raw_value: u32)
-    -> bool;
+        -> bool;
     pub fn mpsgraph_random_op_descriptor_min(handle: *mut c_void) -> f32;
     pub fn mpsgraph_random_op_descriptor_set_min(handle: *mut c_void, value: f32) -> bool;
     pub fn mpsgraph_random_op_descriptor_max(handle: *mut c_void) -> f32;
     pub fn mpsgraph_random_op_descriptor_set_max(handle: *mut c_void, value: f32) -> bool;
     pub fn mpsgraph_random_op_descriptor_min_integer(handle: *mut c_void) -> isize;
     pub fn mpsgraph_random_op_descriptor_set_min_integer(handle: *mut c_void, value: isize)
-    -> bool;
+        -> bool;
     pub fn mpsgraph_random_op_descriptor_max_integer(handle: *mut c_void) -> isize;
     pub fn mpsgraph_random_op_descriptor_set_max_integer(handle: *mut c_void, value: isize)
-    -> bool;
+        -> bool;
     pub fn mpsgraph_random_op_descriptor_mean(handle: *mut c_void) -> f32;
     pub fn mpsgraph_random_op_descriptor_set_mean(handle: *mut c_void, value: f32) -> bool;
     pub fn mpsgraph_random_op_descriptor_standard_deviation(handle: *mut c_void) -> f32;
@@ -647,8 +648,10 @@ unsafe extern "C" {
         value: f32,
     ) -> bool;
     pub fn mpsgraph_random_op_descriptor_sampling_method(handle: *mut c_void) -> u64;
-    pub fn mpsgraph_random_op_descriptor_set_sampling_method(handle: *mut c_void, raw_value: u64)
-    -> bool;
+    pub fn mpsgraph_random_op_descriptor_set_sampling_method(
+        handle: *mut c_void,
+        raw_value: u64,
+    ) -> bool;
     pub fn mpsgraph_graph_random_philox_state_seed(
         graph_handle: *mut c_void,
         seed: usize,
@@ -718,17 +721,25 @@ unsafe extern "C" {
     ) -> *mut c_void;
     pub fn mpsgraph_single_gate_rnn_descriptor_new() -> *mut c_void;
     pub fn mpsgraph_single_gate_rnn_descriptor_reverse(handle: *mut c_void) -> bool;
-    pub fn mpsgraph_single_gate_rnn_descriptor_set_reverse(handle: *mut c_void, value: bool)
-    -> bool;
+    pub fn mpsgraph_single_gate_rnn_descriptor_set_reverse(
+        handle: *mut c_void,
+        value: bool,
+    ) -> bool;
     pub fn mpsgraph_single_gate_rnn_descriptor_bidirectional(handle: *mut c_void) -> bool;
-    pub fn mpsgraph_single_gate_rnn_descriptor_set_bidirectional(handle: *mut c_void, value: bool)
-    -> bool;
+    pub fn mpsgraph_single_gate_rnn_descriptor_set_bidirectional(
+        handle: *mut c_void,
+        value: bool,
+    ) -> bool;
     pub fn mpsgraph_single_gate_rnn_descriptor_training(handle: *mut c_void) -> bool;
-    pub fn mpsgraph_single_gate_rnn_descriptor_set_training(handle: *mut c_void, value: bool)
-    -> bool;
+    pub fn mpsgraph_single_gate_rnn_descriptor_set_training(
+        handle: *mut c_void,
+        value: bool,
+    ) -> bool;
     pub fn mpsgraph_single_gate_rnn_descriptor_activation(handle: *mut c_void) -> usize;
-    pub fn mpsgraph_single_gate_rnn_descriptor_set_activation(handle: *mut c_void, value: usize)
-    -> bool;
+    pub fn mpsgraph_single_gate_rnn_descriptor_set_activation(
+        handle: *mut c_void,
+        value: usize,
+    ) -> bool;
     pub fn mpsgraph_lstm_descriptor_new() -> *mut c_void;
     pub fn mpsgraph_lstm_descriptor_reverse(handle: *mut c_void) -> bool;
     pub fn mpsgraph_lstm_descriptor_set_reverse(handle: *mut c_void, value: bool) -> bool;
@@ -739,8 +750,7 @@ unsafe extern "C" {
     pub fn mpsgraph_lstm_descriptor_training(handle: *mut c_void) -> bool;
     pub fn mpsgraph_lstm_descriptor_set_training(handle: *mut c_void, value: bool) -> bool;
     pub fn mpsgraph_lstm_descriptor_forget_gate_last(handle: *mut c_void) -> bool;
-    pub fn mpsgraph_lstm_descriptor_set_forget_gate_last(handle: *mut c_void, value: bool)
-    -> bool;
+    pub fn mpsgraph_lstm_descriptor_set_forget_gate_last(handle: *mut c_void, value: bool) -> bool;
     pub fn mpsgraph_lstm_descriptor_input_gate_activation(handle: *mut c_void) -> usize;
     pub fn mpsgraph_lstm_descriptor_set_input_gate_activation(
         handle: *mut c_void,
@@ -752,8 +762,10 @@ unsafe extern "C" {
         value: usize,
     ) -> bool;
     pub fn mpsgraph_lstm_descriptor_cell_gate_activation(handle: *mut c_void) -> usize;
-    pub fn mpsgraph_lstm_descriptor_set_cell_gate_activation(handle: *mut c_void, value: usize)
-    -> bool;
+    pub fn mpsgraph_lstm_descriptor_set_cell_gate_activation(
+        handle: *mut c_void,
+        value: usize,
+    ) -> bool;
     pub fn mpsgraph_lstm_descriptor_output_gate_activation(handle: *mut c_void) -> usize;
     pub fn mpsgraph_lstm_descriptor_set_output_gate_activation(
         handle: *mut c_void,
@@ -769,21 +781,26 @@ unsafe extern "C" {
     pub fn mpsgraph_gru_descriptor_training(handle: *mut c_void) -> bool;
     pub fn mpsgraph_gru_descriptor_set_training(handle: *mut c_void, value: bool) -> bool;
     pub fn mpsgraph_gru_descriptor_reset_gate_first(handle: *mut c_void) -> bool;
-    pub fn mpsgraph_gru_descriptor_set_reset_gate_first(handle: *mut c_void, value: bool)
-    -> bool;
+    pub fn mpsgraph_gru_descriptor_set_reset_gate_first(handle: *mut c_void, value: bool) -> bool;
     pub fn mpsgraph_gru_descriptor_reset_after(handle: *mut c_void) -> bool;
     pub fn mpsgraph_gru_descriptor_set_reset_after(handle: *mut c_void, value: bool) -> bool;
     pub fn mpsgraph_gru_descriptor_flip_z(handle: *mut c_void) -> bool;
     pub fn mpsgraph_gru_descriptor_set_flip_z(handle: *mut c_void, value: bool) -> bool;
     pub fn mpsgraph_gru_descriptor_update_gate_activation(handle: *mut c_void) -> usize;
-    pub fn mpsgraph_gru_descriptor_set_update_gate_activation(handle: *mut c_void, value: usize)
-    -> bool;
+    pub fn mpsgraph_gru_descriptor_set_update_gate_activation(
+        handle: *mut c_void,
+        value: usize,
+    ) -> bool;
     pub fn mpsgraph_gru_descriptor_reset_gate_activation(handle: *mut c_void) -> usize;
-    pub fn mpsgraph_gru_descriptor_set_reset_gate_activation(handle: *mut c_void, value: usize)
-    -> bool;
+    pub fn mpsgraph_gru_descriptor_set_reset_gate_activation(
+        handle: *mut c_void,
+        value: usize,
+    ) -> bool;
     pub fn mpsgraph_gru_descriptor_output_gate_activation(handle: *mut c_void) -> usize;
-    pub fn mpsgraph_gru_descriptor_set_output_gate_activation(handle: *mut c_void, value: usize)
-    -> bool;
+    pub fn mpsgraph_gru_descriptor_set_output_gate_activation(
+        handle: *mut c_void,
+        value: usize,
+    ) -> bool;
     pub fn mpsgraph_graph_single_gate_rnn(
         graph_handle: *mut c_void,
         source_handle: *mut c_void,

@@ -17,8 +17,8 @@ fn unary_arithmetic_and_reduction_execute() {
         .reduce_axes(ReductionAxesOp::Sum, &squared, &[1], Some("row_sum"))
         .expect("reduce");
 
-    let input_data = TensorData::from_f32_slice(&device, &[1.0, 2.0, 3.0, 4.0], &[2, 2])
-        .expect("tensor data");
+    let input_data =
+        TensorData::from_f32_slice(&device, &[1.0, 2.0, 3.0, 4.0], &[2, 2]).expect("tensor data");
     let results = graph
         .run(&[Feed::new(&input, &input_data)], &[&reduced])
         .expect("run");
@@ -33,7 +33,12 @@ fn concat_split_and_topk_execute() {
         .placeholder(Some(&[2, 3]), data_type::FLOAT32, Some("input"))
         .expect("placeholder");
     let squared = graph
-        .binary_arithmetic(BinaryArithmeticOp::Multiplication, &input, &input, Some("square"))
+        .binary_arithmetic(
+            BinaryArithmeticOp::Multiplication,
+            &input,
+            &input,
+            Some("square"),
+        )
         .expect("square via multiply");
     let padded = graph
         .pad(&squared, 0, &[0, 1], &[0, 1], 0.0, Some("pad"))
@@ -51,7 +56,16 @@ fn concat_split_and_topk_execute() {
         )
         .expect("run");
 
-    assert_eq!(results[0].read_f32().expect("topk values"), vec![3.0, 2.0, 6.0, 5.0]);
-    assert_eq!(results[1].read_f32().expect("split 0"), vec![0.0, 1.0, 9.0, 0.0, 16.0, 36.0]);
-    assert_eq!(results[2].read_f32().expect("split 1"), vec![4.0, 0.0, 25.0, 0.0]);
+    assert_eq!(
+        results[0].read_f32().expect("topk values"),
+        vec![3.0, 2.0, 6.0, 5.0]
+    );
+    assert_eq!(
+        results[1].read_f32().expect("split 0"),
+        vec![0.0, 1.0, 9.0, 0.0, 16.0, 36.0]
+    );
+    assert_eq!(
+        results[2].read_f32().expect("split 1"),
+        vec![4.0, 0.0, 25.0, 0.0]
+    );
 }

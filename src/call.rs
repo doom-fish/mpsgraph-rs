@@ -35,10 +35,13 @@ impl crate::graph::Graph {
         output_types: &[&ShapedType],
         name: Option<&str>,
     ) -> Result<Vec<Tensor>> {
-        let symbol_name =
-            CString::new(symbol_name).map_err(|_| Error::OperationFailed("call symbol name contained NUL"))?;
+        let symbol_name = CString::new(symbol_name)
+            .map_err(|_| Error::OperationFailed("call symbol name contained NUL"))?;
         let name = optional_cstring(name);
-        let input_handles = input_tensors.iter().map(|tensor| tensor.as_ptr()).collect::<Vec<_>>();
+        let input_handles = input_tensors
+            .iter()
+            .map(|tensor| tensor.as_ptr())
+            .collect::<Vec<_>>();
         let output_type_handles = output_types
             .iter()
             .map(|output_type| output_type.as_ptr())

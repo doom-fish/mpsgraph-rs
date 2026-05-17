@@ -19,9 +19,9 @@ pub mod rnn;
 pub mod specialized;
 pub mod types;
 
+pub use crate::control_flow::WhileBeforeResult;
 pub use crate::data::TensorData;
 pub use crate::error::{Error, Result};
-pub use crate::control_flow::WhileBeforeResult;
 pub use crate::execution::{
     deployment_platform, graph_options, optimization, optimization_profile,
     reduced_precision_fast_math, CompilationDescriptor, ExecutableExecutionDescriptor,
@@ -29,16 +29,12 @@ pub use crate::execution::{
 };
 pub use crate::graph::{
     data_type, data_type_size, padding_mode, padding_style, tensor_named_data_layout,
-    Convolution2DDescriptor, Convolution2DDescriptorInfo, Executable, Feed, FeedDescription,
-    Graph, Pooling2DDescriptor, Pooling2DDescriptorInfo, Tensor,
+    Convolution2DDescriptor, Convolution2DDescriptorInfo, Executable, Feed, FeedDescription, Graph,
+    Pooling2DDescriptor, Pooling2DDescriptorInfo, Tensor,
 };
 pub use crate::ops::{BinaryArithmeticOp, ReductionAxesOp, ReductionAxisOp, UnaryArithmeticOp};
-pub use crate::random::{
-    random_distribution, random_normal_sampling_method, RandomOpDescriptor,
-};
-pub use crate::rnn::{
-    rnn_activation, GRUDescriptor, LSTMDescriptor, SingleGateRNNDescriptor,
-};
+pub use crate::random::{random_distribution, random_normal_sampling_method, RandomOpDescriptor};
+pub use crate::rnn::{rnn_activation, GRUDescriptor, LSTMDescriptor, SingleGateRNNDescriptor};
 pub use crate::specialized::{
     execution_stage, fft_scaling_mode, loss_reduction_type,
     non_maximum_suppression_coordinate_mode, pooling_return_indices_mode, reduction_mode,

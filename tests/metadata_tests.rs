@@ -9,7 +9,10 @@ use apple_mpsgraph::{
 fn graph_metadata_and_descriptors_round_trip() {
     let metal = MetalDevice::system_default().expect("no Metal device available");
     let graph_device = GraphDevice::from_metal_device(&metal).expect("graph device");
-    assert_eq!(graph_device.device_type(), apple_mpsgraph::graph_device_type::METAL);
+    assert_eq!(
+        graph_device.device_type(),
+        apple_mpsgraph::graph_device_type::METAL
+    );
 
     let graph = Graph::new().expect("graph");
     graph
@@ -33,7 +36,9 @@ fn graph_metadata_and_descriptors_round_trip() {
     assert_eq!(shaped.data_type(), data_type::FLOAT16);
 
     let compile_desc = CompilationDescriptor::new().expect("compile desc");
-    compile_desc.disable_type_inference().expect("disable type inference");
+    compile_desc
+        .disable_type_inference()
+        .expect("disable type inference");
     compile_desc
         .set_optimization_level(optimization::LEVEL1)
         .expect("set optimization level");
@@ -43,7 +48,11 @@ fn graph_metadata_and_descriptors_round_trip() {
     assert!(compile_desc.wait_for_compilation_completion());
 
     let output = graph
-        .unary_arithmetic(apple_mpsgraph::UnaryArithmeticOp::Square, &input, Some("square"))
+        .unary_arithmetic(
+            apple_mpsgraph::UnaryArithmeticOp::Square,
+            &input,
+            Some("square"),
+        )
         .expect("square op");
     let executable = graph
         .compile_with_descriptor(
@@ -78,6 +87,14 @@ fn graph_metadata_and_descriptors_round_trip() {
         .set_minimum_deployment_target("14.0")
         .expect("set target");
     assert!(serialization.append());
-    assert_eq!(serialization.deployment_platform(), deployment_platform::MACOS);
-    assert_eq!(serialization.minimum_deployment_target().expect("get target"), "14.0");
+    assert_eq!(
+        serialization.deployment_platform(),
+        deployment_platform::MACOS
+    );
+    assert_eq!(
+        serialization
+            .minimum_deployment_target()
+            .expect("get target"),
+        "14.0"
+    );
 }

@@ -8,7 +8,8 @@ use apple_mpsgraph::{
 
 fn read_i32(data: &TensorData) -> Vec<i32> {
     let bytes = data.read_bytes().expect("read bytes");
-    bytes.chunks_exact(core::mem::size_of::<i32>())
+    bytes
+        .chunks_exact(core::mem::size_of::<i32>())
         .map(|chunk| i32::from_ne_bytes(chunk.try_into().expect("i32 chunk")))
         .collect()
 }
@@ -29,7 +30,11 @@ fn main() {
     let callee_executable = callee_graph
         .compile(
             &device,
-            &[FeedDescription::new(&callee_input, &[2], data_type::FLOAT32)],
+            &[FeedDescription::new(
+                &callee_input,
+                &[2],
+                data_type::FLOAT32,
+            )],
             &[&callee_output],
         )
         .expect("callee executable");
@@ -41,7 +46,9 @@ fn main() {
     let predicate = graph
         .placeholder(Some(&[]), data_type::BOOL, Some("predicate"))
         .expect("predicate placeholder");
-    let bias = graph.constant_f32_slice(&[1.0, 1.0], &[2]).expect("bias constant");
+    let bias = graph
+        .constant_f32_slice(&[1.0, 1.0], &[2])
+        .expect("bias constant");
 
     let output_type = ShapedType::new(Some(&[2]), data_type::FLOAT32).expect("output type");
     let call_results = graph
@@ -58,11 +65,15 @@ fn main() {
 
     let call_operation = call_results[0].operation().expect("call operation");
     let dependency = graph
-        .control_dependency(&[&call_operation], || {
-            vec![graph
-                .unary_arithmetic(UnaryArithmeticOp::Identity, &call_results[0], None)
-                .expect("identity")]
-        }, Some("dependency"))
+        .control_dependency(
+            &[&call_operation],
+            || {
+                vec![graph
+                    .unary_arithmetic(UnaryArithmeticOp::Identity, &call_results[0], None)
+                    .expect("identity")]
+            },
+            Some("dependency"),
+        )
         .expect("control dependency");
 
     let number_of_iterations = graph
@@ -71,15 +82,20 @@ fn main() {
     let zero = graph
         .constant_scalar(0.0, data_type::INT32)
         .expect("zero constant");
-    let one = graph.constant_scalar(1.0, data_type::INT32).expect("one constant");
+    let one = graph
+        .constant_scalar(1.0, data_type::INT32)
+        .expect("one constant");
     let limit = graph
         .constant_scalar(3.0, data_type::INT32)
         .expect("limit constant");
 
     let for_results = graph
-        .for_loop_iterations(&number_of_iterations, &[&zero], |_index, args| {
-            vec![graph.addition(&args[0], &one, None).expect("for-loop add")]
-        }, Some("for_loop"))
+        .for_loop_iterations(
+            &number_of_iterations,
+            &[&zero],
+            |_index, args| vec![graph.addition(&args[0], &one, None).expect("for-loop add")],
+            Some("for_loop"),
+        )
         .expect("for loop");
     let while_results = graph
         .while_loop(
@@ -124,15 +140,21 @@ fn main() {
         .expect("compile executable");
 
     let input_data = TensorData::from_f32_slice(&device, &[3.0, 4.0], &[2]).expect("input data");
-    let predicate_data = TensorData::from_bytes(&device, &[1_u8], &[], data_type::BOOL)
-        .expect("predicate data");
+    let predicate_data =
+        TensorData::from_bytes(&device, &[1_u8], &[], data_type::BOOL).expect("predicate data");
     let results = executable
         .run(&queue, &[&input_data, &predicate_data])
         .expect("run executable");
 
-    println!("call output: {:?}", results[0].read_f32().expect("call output"));
+    println!(
+        "call output: {:?}",
+        results[0].read_f32().expect("call output")
+    );
     println!("if output: {:?}", results[1].read_f32().expect("if output"));
-    println!("dependency output: {:?}", results[2].read_f32().expect("dependency output"));
+    println!(
+        "dependency output: {:?}",
+        results[2].read_f32().expect("dependency output")
+    );
     println!("for output: {:?}", read_i32(&results[3]));
     println!("while output: {:?}", read_i32(&results[4]));
 }

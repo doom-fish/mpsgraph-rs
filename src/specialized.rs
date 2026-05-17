@@ -1345,7 +1345,10 @@ impl Graph {
         name: Option<&str>,
     ) -> Option<Tensor> {
         let name = optional_cstring(name);
-        let handles = tensors.iter().map(|tensor| tensor.as_ptr()).collect::<Vec<_>>();
+        let handles = tensors
+            .iter()
+            .map(|tensor| tensor.as_ptr())
+            .collect::<Vec<_>>();
         // SAFETY: all handles and slices remain valid for the duration of the call.
         let ptr = unsafe {
             ffi::mpsgraph_graph_sparse_tensor_with_descriptor(
@@ -1416,7 +1419,9 @@ impl ExecutionDescriptor {
         value: u64,
     ) -> Result<()> {
         // SAFETY: caller guarantees `event_handle` is a valid shared-event pointer.
-        let ok = unsafe { ffi::mpsgraph_execution_descriptor_wait_for_event(self.as_ptr(), event_handle, value) };
+        let ok = unsafe {
+            ffi::mpsgraph_execution_descriptor_wait_for_event(self.as_ptr(), event_handle, value)
+        };
         if ok {
             Ok(())
         } else {

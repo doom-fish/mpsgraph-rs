@@ -201,11 +201,14 @@ impl RandomOpDescriptor {
 
     pub fn set_standard_deviation(&self, value: f32) -> Result<()> {
         // SAFETY: `self.ptr` is a live descriptor handle.
-        let ok = unsafe { ffi::mpsgraph_random_op_descriptor_set_standard_deviation(self.ptr, value) };
+        let ok =
+            unsafe { ffi::mpsgraph_random_op_descriptor_set_standard_deviation(self.ptr, value) };
         if ok {
             Ok(())
         } else {
-            Err(Error::OperationFailed("failed to set random standardDeviation"))
+            Err(Error::OperationFailed(
+                "failed to set random standardDeviation",
+            ))
         }
     }
 
@@ -221,7 +224,9 @@ impl RandomOpDescriptor {
         if ok {
             Ok(())
         } else {
-            Err(Error::OperationFailed("failed to set random sampling method"))
+            Err(Error::OperationFailed(
+                "failed to set random sampling method",
+            ))
         }
     }
 }
@@ -231,7 +236,9 @@ impl crate::graph::Graph {
     pub fn random_philox_state_seed(&self, seed: usize, name: Option<&str>) -> Option<Tensor> {
         let name = optional_cstring(name);
         // SAFETY: all handles remain valid for the duration of the call.
-        let ptr = unsafe { ffi::mpsgraph_graph_random_philox_state_seed(self.as_ptr(), seed, cstring_ptr(&name)) };
+        let ptr = unsafe {
+            ffi::mpsgraph_graph_random_philox_state_seed(self.as_ptr(), seed, cstring_ptr(&name))
+        };
         wrap_tensor(ptr)
     }
 
@@ -265,7 +272,11 @@ impl crate::graph::Graph {
         name: Option<&str>,
     ) -> Option<Tensor> {
         let name = optional_cstring(name);
-        let shape_ptr = if shape.is_empty() { ptr::null() } else { shape.as_ptr() };
+        let shape_ptr = if shape.is_empty() {
+            ptr::null()
+        } else {
+            shape.as_ptr()
+        };
         // SAFETY: all handles remain valid for the duration of the call.
         let ptr = unsafe {
             ffi::mpsgraph_graph_random_tensor(
@@ -308,7 +319,11 @@ impl crate::graph::Graph {
         name: Option<&str>,
     ) -> Option<Tensor> {
         let name = optional_cstring(name);
-        let shape_ptr = if shape.is_empty() { ptr::null() } else { shape.as_ptr() };
+        let shape_ptr = if shape.is_empty() {
+            ptr::null()
+        } else {
+            shape.as_ptr()
+        };
         // SAFETY: all handles remain valid for the duration of the call.
         let ptr = unsafe {
             ffi::mpsgraph_graph_random_tensor_seed(
@@ -354,7 +369,11 @@ impl crate::graph::Graph {
         name: Option<&str>,
     ) -> Option<(Tensor, Tensor)> {
         let name = optional_cstring(name);
-        let shape_ptr = if shape.is_empty() { ptr::null() } else { shape.as_ptr() };
+        let shape_ptr = if shape.is_empty() {
+            ptr::null()
+        } else {
+            shape.as_ptr()
+        };
         // SAFETY: all handles remain valid for the duration of the call.
         let box_handle = unsafe {
             ffi::mpsgraph_graph_random_tensor_state(

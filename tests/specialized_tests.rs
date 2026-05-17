@@ -3,13 +3,12 @@
 use apple_mpsgraph::{
     data_type, execution_stage, fft_scaling_mode, loss_reduction_type,
     non_maximum_suppression_coordinate_mode, padding_mode, pooling_return_indices_mode,
-    reduction_mode, resize_mode, resize_nearest_rounding_mode, scatter_mode,
-    sparse_storage_type, tensor_named_data_layout, Convolution2DDescriptor,
-    Convolution2DDescriptorInfo, Convolution3DDescriptor, Convolution3DDescriptorInfo,
-    CreateSparseDescriptor, DepthwiseConvolution2DDescriptor,
-    DepthwiseConvolution2DDescriptorInfo, DepthwiseConvolution3DDescriptor,
-    DepthwiseConvolution3DDescriptorInfo, FftDescriptor, FftDescriptorInfo, Graph,
-    ImToColDescriptor, ImToColDescriptorInfo, Pooling4DDescriptor,
+    reduction_mode, resize_mode, resize_nearest_rounding_mode, scatter_mode, sparse_storage_type,
+    tensor_named_data_layout, Convolution2DDescriptor, Convolution2DDescriptorInfo,
+    Convolution3DDescriptor, Convolution3DDescriptorInfo, CreateSparseDescriptor,
+    DepthwiseConvolution2DDescriptor, DepthwiseConvolution2DDescriptorInfo,
+    DepthwiseConvolution3DDescriptor, DepthwiseConvolution3DDescriptorInfo, FftDescriptor,
+    FftDescriptorInfo, Graph, ImToColDescriptor, ImToColDescriptorInfo, Pooling4DDescriptor,
     Pooling4DDescriptorInfo, ShapedType, StencilDescriptor, StencilDescriptorInfo,
 };
 use std::process::Command;
@@ -26,7 +25,9 @@ fn macos_version() -> (u64, u64, u64) {
             .expect("utf8 product version")
             .trim()
             .to_owned();
-        let mut parts = version.split('.').map(|part| part.parse::<u64>().expect("numeric version part"));
+        let mut parts = version
+            .split('.')
+            .map(|part| part.parse::<u64>().expect("numeric version part"));
         (
             parts.next().unwrap_or(0),
             parts.next().unwrap_or(0),
@@ -70,7 +71,10 @@ fn specialized_constants_types_and_descriptors_round_trip() {
     assert_eq!(loss_reduction_type::AXIS, 0);
     assert_eq!(loss_reduction_type::SUM, 1);
     assert_eq!(loss_reduction_type::MEAN, 2);
-    assert_eq!(non_maximum_suppression_coordinate_mode::CENTERS_WIDTH_FIRST, 3);
+    assert_eq!(
+        non_maximum_suppression_coordinate_mode::CENTERS_WIDTH_FIRST,
+        3
+    );
     assert_eq!(resize_mode::BILINEAR, 1);
     assert_eq!(resize_nearest_rounding_mode::ROUND_TO_ODD, 5);
     assert_eq!(scatter_mode::SET, 6);
@@ -102,9 +106,13 @@ fn specialized_constants_types_and_descriptors_round_trip() {
         .is_some(),
         macos_version_at_least(13, 2)
     );
-    assert!(DepthwiseConvolution2DDescriptor::new(DepthwiseConvolution2DDescriptorInfo::default()).is_some());
+    assert!(
+        DepthwiseConvolution2DDescriptor::new(DepthwiseConvolution2DDescriptorInfo::default())
+            .is_some()
+    );
     assert_eq!(
-        DepthwiseConvolution3DDescriptor::new(DepthwiseConvolution3DDescriptorInfo::default()).is_some(),
+        DepthwiseConvolution3DDescriptor::new(DepthwiseConvolution3DDescriptorInfo::default())
+            .is_some(),
         macos_version_at_least(12, 0)
     );
     assert_eq!(
@@ -153,8 +161,12 @@ fn specialized_ops_smoke_build_all_categories() {
         .constant_f32_slice(&[3.0, 1.0, 2.0], &[3])
         .expect("vector");
     let matrix = graph.constant_f32_slice(&[4.0], &[1, 1]).expect("matrix");
-    let source4d = graph.constant_f32_slice(&[1.0], &[1, 1, 1, 1]).expect("source4d");
-    let weights4d = graph.constant_f32_slice(&[1.0], &[1, 1, 1, 1]).expect("weights4d");
+    let source4d = graph
+        .constant_f32_slice(&[1.0], &[1, 1, 1, 1])
+        .expect("source4d");
+    let weights4d = graph
+        .constant_f32_slice(&[1.0], &[1, 1, 1, 1])
+        .expect("weights4d");
     let source5d = graph
         .constant_f32_slice(&[1.0], &[1, 1, 1, 1, 1])
         .expect("source5d");
@@ -170,7 +182,9 @@ fn specialized_ops_smoke_build_all_categories() {
     let learning_rate = graph
         .constant_f32_slice(&[0.1], &[1])
         .expect("learning rate");
-    let updates = graph.constant_f32_slice(&[10.0, 20.0], &[2]).expect("updates");
+    let updates = graph
+        .constant_f32_slice(&[10.0, 20.0], &[2])
+        .expect("updates");
     let indices_1d = graph
         .constant_bytes(&i32_bytes(&[0, 2]), &[2], data_type::INT32)
         .expect("indices 1d");
@@ -206,10 +220,9 @@ fn specialized_ops_smoke_build_all_categories() {
         Convolution3DDescriptor::new(Convolution3DDescriptorInfo::default()),
         macos_version_at_least(13, 2),
     );
-    let depthwise2d_descriptor = DepthwiseConvolution2DDescriptor::new(
-        DepthwiseConvolution2DDescriptorInfo::default(),
-    )
-    .expect("depthwise2d descriptor");
+    let depthwise2d_descriptor =
+        DepthwiseConvolution2DDescriptor::new(DepthwiseConvolution2DDescriptorInfo::default())
+            .expect("depthwise2d descriptor");
     let depthwise3d_descriptor = assert_availability(
         "depthwise3d descriptor",
         DepthwiseConvolution3DDescriptor::new(DepthwiseConvolution3DDescriptorInfo::default()),
@@ -290,9 +303,15 @@ fn specialized_ops_smoke_build_all_categories() {
     let variable = graph
         .variable_f32_slice(&[5.0, 7.0], &[2], Some("variable"))
         .expect("variable");
-    assert!(graph.read_variable(&variable, Some("read_variable")).is_some());
-    assert!(graph.assign_variable(&variable, &updates, Some("assign_variable")).is_some());
-    assert!(graph.one_hot(&indices_1d, 3, data_type::FLOAT32, Some("one_hot")).is_some());
+    assert!(graph
+        .read_variable(&variable, Some("read_variable"))
+        .is_some());
+    assert!(graph
+        .assign_variable(&variable, &updates, Some("assign_variable"))
+        .is_some());
+    assert!(graph
+        .one_hot(&indices_1d, 3, data_type::FLOAT32, Some("one_hot"))
+        .is_some());
     assert!(graph
         .stochastic_gradient_descent(&learning_rate, &vector, &vector, Some("sgd"))
         .is_some());
@@ -433,10 +452,14 @@ fn specialized_ops_smoke_build_all_categories() {
             .is_some());
     }
     if let Some(descriptor) = im_to_col_descriptor.as_ref() {
-        assert!(graph.im_to_col(&source4d, descriptor, Some("im_to_col")).is_some());
+        assert!(graph
+            .im_to_col(&source4d, descriptor, Some("im_to_col"))
+            .is_some());
     }
     if let Some(descriptor) = pooling_descriptor.as_ref() {
-        assert!(graph.max_pooling4d(&source4d, descriptor, Some("max_pooling4d")).is_some());
+        assert!(graph
+            .max_pooling4d(&source4d, descriptor, Some("max_pooling4d"))
+            .is_some());
     }
     if let Some(descriptor) = pooling_indices_descriptor.as_ref() {
         assert!(graph
@@ -493,7 +516,9 @@ fn specialized_ops_execute_selected_results() {
     let one_hot = graph
         .one_hot(&indices, 3, data_type::FLOAT32, Some("one_hot"))
         .expect("one hot");
-    let inverse = graph.matrix_inverse(&matrix, Some("inverse")).expect("inverse");
+    let inverse = graph
+        .matrix_inverse(&matrix, Some("inverse"))
+        .expect("inverse");
     let read_variable = graph
         .read_variable(&variable, Some("read_variable"))
         .expect("read variable");
@@ -501,7 +526,13 @@ fn specialized_ops_execute_selected_results() {
         .quantize(&values, 1.0, 0.0, data_type::INT8, Some("quantized"))
         .expect("quantize");
     let dequantized = graph
-        .dequantize(&quantized, 1.0, 0.0, data_type::FLOAT32, Some("dequantized"))
+        .dequantize(
+            &quantized,
+            1.0,
+            0.0,
+            data_type::FLOAT32,
+            Some("dequantized"),
+        )
         .expect("dequantize");
 
     let results = graph
@@ -519,11 +550,23 @@ fn specialized_ops_execute_selected_results() {
         )
         .expect("run graph");
 
-    assert_eq!(results[0].read_f32().expect("cumulative"), vec![3.0, 4.0, 6.0]);
+    assert_eq!(
+        results[0].read_f32().expect("cumulative"),
+        vec![3.0, 4.0, 6.0]
+    );
     assert_eq!(results[1].read_f32().expect("sorted"), vec![1.0, 2.0, 3.0]);
     assert_eq!(read_i32(&results[2]), vec![1, 2, 0]);
-    assert_eq!(results[3].read_f32().expect("one hot"), vec![1.0, 0.0, 0.0, 0.0, 0.0, 1.0]);
+    assert_eq!(
+        results[3].read_f32().expect("one hot"),
+        vec![1.0, 0.0, 0.0, 0.0, 0.0, 1.0]
+    );
     assert_eq!(results[4].read_f32().expect("inverse"), vec![0.25]);
-    assert_eq!(results[5].read_f32().expect("read variable"), vec![5.0, 7.0]);
-    assert_eq!(results[6].read_f32().expect("dequantized"), vec![3.0, 1.0, 2.0]);
+    assert_eq!(
+        results[5].read_f32().expect("read variable"),
+        vec![5.0, 7.0]
+    );
+    assert_eq!(
+        results[6].read_f32().expect("dequantized"),
+        vec![3.0, 1.0, 2.0]
+    );
 }

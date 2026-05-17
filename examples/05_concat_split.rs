@@ -11,13 +11,18 @@ fn main() {
         .concat_pair(&input, &input, 1, Some("concat"))
         .expect("concat");
     let split = graph.split_num(&concat, 2, 1, Some("split"));
-    let stacked = graph.stack(&[&split[0], &split[1]], 0, Some("stack")).expect("stack");
+    let stacked = graph
+        .stack(&[&split[0], &split[1]], 0, Some("stack"))
+        .expect("stack");
 
-    let input_data = TensorData::from_f32_slice(&device, &[1.0, 2.0, 3.0, 4.0], &[2, 2])
-        .expect("tensor data");
+    let input_data =
+        TensorData::from_f32_slice(&device, &[1.0, 2.0, 3.0, 4.0], &[2, 2]).expect("tensor data");
     let results = graph
         .run(&[Feed::new(&input, &input_data)], &[&stacked])
         .expect("run");
 
-    println!("stacked tensor bytes: {}", results[0].byte_len().expect("byte len"));
+    println!(
+        "stacked tensor bytes: {}",
+        results[0].byte_len().expect("byte len")
+    );
 }

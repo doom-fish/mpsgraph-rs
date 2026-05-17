@@ -10,7 +10,9 @@ fn optional_cstring(name: Option<&str>) -> Option<CString> {
 
 #[allow(clippy::ref_option)]
 fn cstring_ptr(value: &Option<CString>) -> *const c_char {
-    value.as_ref().map_or(core::ptr::null(), |value| value.as_ptr())
+    value
+        .as_ref()
+        .map_or(core::ptr::null(), |value| value.as_ptr())
 }
 
 fn wrap_tensor(ptr: *mut c_void) -> Option<Tensor> {
@@ -237,12 +239,7 @@ impl crate::graph::Graph {
     }
 
     #[must_use]
-    pub fn leaky_relu(
-        &self,
-        tensor: &Tensor,
-        alpha: f64,
-        name: Option<&str>,
-    ) -> Option<Tensor> {
+    pub fn leaky_relu(&self, tensor: &Tensor, alpha: f64, name: Option<&str>) -> Option<Tensor> {
         let name = optional_cstring(name);
         // SAFETY: all handles remain valid for the duration of the call.
         let ptr = unsafe {
@@ -374,7 +371,10 @@ impl crate::graph::Graph {
         name: Option<&str>,
     ) -> Option<Tensor> {
         let name = optional_cstring(name);
-        let handles = tensors.iter().map(|tensor| tensor.as_ptr()).collect::<Vec<_>>();
+        let handles = tensors
+            .iter()
+            .map(|tensor| tensor.as_ptr())
+            .collect::<Vec<_>>();
         // SAFETY: all handles remain valid for the duration of the call.
         let ptr = unsafe {
             ffi::mpsgraph_graph_concat_tensors(
@@ -459,7 +459,10 @@ impl crate::graph::Graph {
     #[must_use]
     pub fn stack(&self, tensors: &[&Tensor], axis: isize, name: Option<&str>) -> Option<Tensor> {
         let name = optional_cstring(name);
-        let handles = tensors.iter().map(|tensor| tensor.as_ptr()).collect::<Vec<_>>();
+        let handles = tensors
+            .iter()
+            .map(|tensor| tensor.as_ptr())
+            .collect::<Vec<_>>();
         // SAFETY: all handles remain valid for the duration of the call.
         let ptr = unsafe {
             ffi::mpsgraph_graph_stack(

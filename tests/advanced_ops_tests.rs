@@ -3,8 +3,8 @@
 use apple_metal::MetalDevice;
 use apple_mpsgraph::{
     data_type, random_distribution, rnn_activation, BinaryArithmeticOp, CompilationDescriptor,
-    FeedDescription, Graph, GRUDescriptor, LSTMDescriptor, RandomOpDescriptor,
-    ShapedType, SingleGateRNNDescriptor, TensorData, UnaryArithmeticOp, WhileBeforeResult,
+    FeedDescription, GRUDescriptor, Graph, LSTMDescriptor, RandomOpDescriptor, ShapedType,
+    SingleGateRNNDescriptor, TensorData, UnaryArithmeticOp, WhileBeforeResult,
 };
 
 fn i32_bytes(values: &[i32]) -> Vec<u8> {
@@ -16,7 +16,8 @@ fn i32_bytes(values: &[i32]) -> Vec<u8> {
 
 fn read_i32(data: &TensorData) -> Vec<i32> {
     let bytes = data.read_bytes().expect("read bytes");
-    bytes.chunks_exact(core::mem::size_of::<i32>())
+    bytes
+        .chunks_exact(core::mem::size_of::<i32>())
         .map(|chunk| i32::from_ne_bytes(chunk.try_into().expect("i32 chunk")))
         .collect()
 }
@@ -38,7 +39,11 @@ fn call_and_control_flow_execute() {
     let callee_executable = callee_graph
         .compile(
             &device,
-            &[FeedDescription::new(&callee_input, &[2], data_type::FLOAT32)],
+            &[FeedDescription::new(
+                &callee_input,
+                &[2],
+                data_type::FLOAT32,
+            )],
             &[&callee_output],
         )
         .expect("callee executable");
@@ -54,7 +59,8 @@ fn call_and_control_flow_execute() {
         .constant_f32_slice(&[1.0, 1.0], &[2])
         .expect("bias constant");
 
-    let call_output_type = ShapedType::new(Some(&[2]), data_type::FLOAT32).expect("call output type");
+    let call_output_type =
+        ShapedType::new(Some(&[2]), data_type::FLOAT32).expect("call output type");
     let call_results = graph
         .call("double", &[&input], &[&call_output_type], Some("call"))
         .expect("call op");
@@ -72,11 +78,15 @@ fn call_and_control_flow_execute() {
 
     let call_operation = call_results[0].operation().expect("call operation");
     let dependent_results = graph
-        .control_dependency(&[&call_operation], || {
-            vec![graph
-                .unary_arithmetic(UnaryArithmeticOp::Identity, &call_results[0], None)
-                .expect("dependent identity")]
-        }, Some("dependency"))
+        .control_dependency(
+            &[&call_operation],
+            || {
+                vec![graph
+                    .unary_arithmetic(UnaryArithmeticOp::Identity, &call_results[0], None)
+                    .expect("dependent identity")]
+            },
+            Some("dependency"),
+        )
         .expect("control dependency");
     assert_eq!(dependent_results.len(), 1);
 
@@ -94,11 +104,16 @@ fn call_and_control_flow_execute() {
         .expect("limit constant");
 
     let for_results = graph
-        .for_loop_iterations(&number_of_iterations, &[&zero], |_index, args| {
-            vec![graph
-                .addition(&args[0], &one, None)
-                .expect("for-loop accumulation")]
-        }, Some("for_loop"))
+        .for_loop_iterations(
+            &number_of_iterations,
+            &[&zero],
+            |_index, args| {
+                vec![graph
+                    .addition(&args[0], &one, None)
+                    .expect("for-loop accumulation")]
+            },
+            Some("for_loop"),
+        )
         .expect("for loop");
     assert_eq!(for_results.len(), 1);
 
@@ -150,15 +165,18 @@ fn call_and_control_flow_execute() {
         .expect("compile caller");
 
     let input_data = TensorData::from_f32_slice(&device, &[3.0, 4.0], &[2]).expect("input data");
-    let predicate_data = TensorData::from_bytes(&device, &[1_u8], &[], data_type::BOOL)
-        .expect("predicate data");
+    let predicate_data =
+        TensorData::from_bytes(&device, &[1_u8], &[], data_type::BOOL).expect("predicate data");
     let results = executable
         .run(&queue, &[&input_data, &predicate_data])
         .expect("run executable");
 
     assert_eq!(results[0].read_f32().expect("call output"), vec![6.0, 8.0]);
     assert_eq!(results[1].read_f32().expect("if output"), vec![4.0, 5.0]);
-    assert_eq!(results[2].read_f32().expect("dependency output"), vec![6.0, 8.0]);
+    assert_eq!(
+        results[2].read_f32().expect("dependency output"),
+        vec![6.0, 8.0]
+    );
     assert_eq!(read_i32(&results[3]), vec![4]);
     assert_eq!(read_i32(&results[4]), vec![3]);
 }
@@ -192,7 +210,12 @@ fn gather_and_random_execute() {
         .gather_along_axis(1, &updates, &along_indices, Some("gather_axis"))
         .expect("gather along axis");
     let gather_along_axis_tensor = graph
-        .gather_along_axis_tensor(&axis_tensor, &updates, &along_indices, Some("gather_axis_tensor"))
+        .gather_along_axis_tensor(
+            &axis_tensor,
+            &updates,
+            &along_indices,
+            Some("gather_axis_tensor"),
+        )
         .expect("gather along axis tensor");
 
     let descriptor = RandomOpDescriptor::new(random_distribution::UNIFORM, data_type::FLOAT32)
@@ -211,7 +234,9 @@ fn gather_and_random_execute() {
     let random_state = graph
         .random_tensor_state(&[2], &descriptor, &state, Some("random_state_tensor"))
         .expect("random state tensor");
-    let dropout = graph.dropout(&updates, 1.0, Some("dropout")).expect("dropout");
+    let dropout = graph
+        .dropout(&updates, 1.0, Some("dropout"))
+        .expect("dropout");
 
     let results = graph
         .run(
@@ -229,7 +254,10 @@ fn gather_and_random_execute() {
         )
         .expect("run graph");
 
-    assert_eq!(results[0].read_f32().expect("gather"), vec![30.0, 10.0, 60.0, 40.0]);
+    assert_eq!(
+        results[0].read_f32().expect("gather"),
+        vec![30.0, 10.0, 60.0, 40.0]
+    );
     assert_eq!(results[1].read_f32().expect("gather nd"), vec![20.0, 40.0]);
     assert_eq!(
         results[2].read_f32().expect("gather axis"),
@@ -239,9 +267,14 @@ fn gather_and_random_execute() {
         results[3].read_f32().expect("gather axis tensor"),
         vec![30.0, 20.0, 10.0, 40.0, 50.0, 60.0]
     );
-    assert_eq!(results[4].read_f32().expect("random a"), results[5].read_f32().expect("random b"));
+    assert_eq!(
+        results[4].read_f32().expect("random a"),
+        results[5].read_f32().expect("random b")
+    );
     let random_values = results[4].read_f32().expect("random values");
-    assert!(random_values.iter().all(|value| *value >= 0.0 && *value < 1.0));
+    assert!(random_values
+        .iter()
+        .all(|value| *value >= 0.0 && *value < 1.0));
     assert_eq!(results[6].shape(), vec![2]);
     assert_eq!(results[7].read_f32().expect("dropout"), vec![0.0; 6]);
 }
@@ -308,9 +341,7 @@ fn rnn_descriptors_and_execute() {
     gru_descriptor
         .set_reset_after(true)
         .expect("set reset after");
-    gru_descriptor
-        .set_training(true)
-        .expect("set training");
+    gru_descriptor.set_training(true).expect("set training");
     assert!(gru_descriptor.reset_after());
     assert!(gru_descriptor.training());
 
@@ -351,9 +382,15 @@ fn rnn_descriptors_and_execute() {
         )
         .expect("run rnn graph");
 
-    assert_eq!(results[0].read_f32().expect("single gate output"), vec![0.5]);
+    assert_eq!(
+        results[0].read_f32().expect("single gate output"),
+        vec![0.5]
+    );
     assert_eq!(results[1].read_f32().expect("lstm output"), vec![0.0]);
     assert_eq!(results[2].read_f32().expect("lstm cell"), vec![0.0]);
     assert_eq!(results[3].read_f32().expect("gru output"), vec![0.0]);
-    assert_eq!(results[4].read_f32().expect("gru training state"), vec![0.0, 0.0, 0.0, 0.0]);
+    assert_eq!(
+        results[4].read_f32().expect("gru training state"),
+        vec![0.0, 0.0, 0.0, 0.0]
+    );
 }

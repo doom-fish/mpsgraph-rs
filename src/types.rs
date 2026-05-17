@@ -157,7 +157,8 @@ impl ShapedType {
     /// Create a shaped type from an optional shape and `MPSDataType` raw value.
     #[must_use]
     pub fn new(shape: Option<&[isize]>, data_type: u32) -> Option<Self> {
-        let (shape_ptr, shape_len) = shape.map_or((ptr::null(), 0), |shape| (shape.as_ptr(), shape.len()));
+        let (shape_ptr, shape_len) =
+            shape.map_or((ptr::null(), 0), |shape| (shape.as_ptr(), shape.len()));
         // SAFETY: the optional slice lives for the duration of the call.
         let ptr = unsafe { ffi::mpsgraph_shaped_type_new(shape_ptr, shape_len, data_type) };
         if ptr.is_null() {
@@ -192,7 +193,8 @@ impl ShapedType {
 
     /// Replace the shape metadata for this shaped type.
     pub fn set_shape(&self, shape: Option<&[isize]>) -> Result<()> {
-        let (shape_ptr, shape_len) = shape.map_or((ptr::null(), 0), |shape| (shape.as_ptr(), shape.len()));
+        let (shape_ptr, shape_len) =
+            shape.map_or((ptr::null(), 0), |shape| (shape.as_ptr(), shape.len()));
         // SAFETY: the optional slice lives for the duration of the call.
         let ok = unsafe { ffi::mpsgraph_shaped_type_set_shape(self.ptr, shape_ptr, shape_len) };
         if ok {
@@ -209,7 +211,9 @@ impl ShapedType {
         if ok {
             Ok(())
         } else {
-            Err(Error::OperationFailed("failed to set shaped type data type"))
+            Err(Error::OperationFailed(
+                "failed to set shaped type data type",
+            ))
         }
     }
 

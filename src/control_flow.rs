@@ -138,7 +138,10 @@ impl crate::graph::Graph {
         F: FnMut() -> Vec<Tensor>,
     {
         let name = optional_cstring(name);
-        let operation_handles = operations.iter().map(|operation| operation.as_ptr()).collect::<Vec<_>>();
+        let operation_handles = operations
+            .iter()
+            .map(|operation| operation.as_ptr())
+            .collect::<Vec<_>>();
         let operation_ptr = if operation_handles.is_empty() {
             ptr::null()
         } else {
@@ -234,7 +237,10 @@ impl crate::graph::Graph {
         After: FnMut(&[Tensor]) -> Vec<Tensor>,
     {
         let name = optional_cstring(name);
-        let input_handles = initial_inputs.iter().map(|tensor| tensor.as_ptr()).collect::<Vec<_>>();
+        let input_handles = initial_inputs
+            .iter()
+            .map(|tensor| tensor.as_ptr())
+            .collect::<Vec<_>>();
         let input_ptr = if input_handles.is_empty() {
             ptr::null()
         } else {

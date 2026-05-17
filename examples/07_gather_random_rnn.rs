@@ -1,7 +1,7 @@
 #![allow(clippy::too_many_lines)]
 
 use apple_mpsgraph::{
-    data_type, random_distribution, rnn_activation, Graph, GRUDescriptor, LSTMDescriptor,
+    data_type, random_distribution, rnn_activation, GRUDescriptor, Graph, LSTMDescriptor,
     RandomOpDescriptor, SingleGateRNNDescriptor,
 };
 
@@ -40,7 +40,12 @@ fn main() {
         .gather_along_axis(1, &updates, &along_indices, Some("gather_axis"))
         .expect("gather along axis");
     let gather_axis_tensor = graph
-        .gather_along_axis_tensor(&axis_tensor, &updates, &along_indices, Some("gather_axis_tensor"))
+        .gather_along_axis_tensor(
+            &axis_tensor,
+            &updates,
+            &along_indices,
+            Some("gather_axis_tensor"),
+        )
         .expect("gather along axis tensor");
 
     let descriptor = RandomOpDescriptor::new(random_distribution::UNIFORM, data_type::FLOAT32)
@@ -50,7 +55,9 @@ fn main() {
     let random = graph
         .random_tensor_seed(&[4], &descriptor, 7, Some("random"))
         .expect("random tensor");
-    let dropout = graph.dropout(&updates, 1.0, Some("dropout")).expect("dropout");
+    let dropout = graph
+        .dropout(&updates, 1.0, Some("dropout"))
+        .expect("dropout");
 
     let single_gate_descriptor = SingleGateRNNDescriptor::new().expect("single gate descriptor");
     single_gate_descriptor
@@ -149,16 +156,28 @@ fn main() {
 
     println!("gather: {:?}", results[0].read_f32().expect("gather"));
     println!("gather_nd: {:?}", results[1].read_f32().expect("gather_nd"));
-    println!("gather_axis: {:?}", results[2].read_f32().expect("gather_axis"));
+    println!(
+        "gather_axis: {:?}",
+        results[2].read_f32().expect("gather_axis")
+    );
     println!(
         "gather_axis_tensor: {:?}",
         results[3].read_f32().expect("gather_axis_tensor")
     );
     println!("random: {:?}", results[4].read_f32().expect("random"));
     println!("dropout: {:?}", results[5].read_f32().expect("dropout"));
-    println!("single_gate: {:?}", results[6].read_f32().expect("single_gate"));
-    println!("lstm state: {:?}", results[7].read_f32().expect("lstm state"));
+    println!(
+        "single_gate: {:?}",
+        results[6].read_f32().expect("single_gate")
+    );
+    println!(
+        "lstm state: {:?}",
+        results[7].read_f32().expect("lstm state")
+    );
     println!("lstm cell: {:?}", results[8].read_f32().expect("lstm cell"));
     println!("gru state: {:?}", results[9].read_f32().expect("gru state"));
-    println!("gru training: {:?}", results[10].read_f32().expect("gru training"));
+    println!(
+        "gru training: {:?}",
+        results[10].read_f32().expect("gru training")
+    );
 }

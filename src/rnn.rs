@@ -117,10 +117,34 @@ impl SingleGateRNNDescriptor {
         }
     }
 
-    bool_getter_setter!(reverse, set_reverse, mpsgraph_single_gate_rnn_descriptor_reverse, mpsgraph_single_gate_rnn_descriptor_set_reverse, "failed to set single-gate RNN reverse");
-    bool_getter_setter!(bidirectional, set_bidirectional, mpsgraph_single_gate_rnn_descriptor_bidirectional, mpsgraph_single_gate_rnn_descriptor_set_bidirectional, "failed to set single-gate RNN bidirectional");
-    bool_getter_setter!(training, set_training, mpsgraph_single_gate_rnn_descriptor_training, mpsgraph_single_gate_rnn_descriptor_set_training, "failed to set single-gate RNN training");
-    activation_getter_setter!(activation, set_activation, mpsgraph_single_gate_rnn_descriptor_activation, mpsgraph_single_gate_rnn_descriptor_set_activation, "failed to set single-gate RNN activation");
+    bool_getter_setter!(
+        reverse,
+        set_reverse,
+        mpsgraph_single_gate_rnn_descriptor_reverse,
+        mpsgraph_single_gate_rnn_descriptor_set_reverse,
+        "failed to set single-gate RNN reverse"
+    );
+    bool_getter_setter!(
+        bidirectional,
+        set_bidirectional,
+        mpsgraph_single_gate_rnn_descriptor_bidirectional,
+        mpsgraph_single_gate_rnn_descriptor_set_bidirectional,
+        "failed to set single-gate RNN bidirectional"
+    );
+    bool_getter_setter!(
+        training,
+        set_training,
+        mpsgraph_single_gate_rnn_descriptor_training,
+        mpsgraph_single_gate_rnn_descriptor_set_training,
+        "failed to set single-gate RNN training"
+    );
+    activation_getter_setter!(
+        activation,
+        set_activation,
+        mpsgraph_single_gate_rnn_descriptor_activation,
+        mpsgraph_single_gate_rnn_descriptor_set_activation,
+        "failed to set single-gate RNN activation"
+    );
 }
 
 descriptor_handle!(LSTMDescriptor);
@@ -136,16 +160,76 @@ impl LSTMDescriptor {
         }
     }
 
-    bool_getter_setter!(reverse, set_reverse, mpsgraph_lstm_descriptor_reverse, mpsgraph_lstm_descriptor_set_reverse, "failed to set LSTM reverse");
-    bool_getter_setter!(bidirectional, set_bidirectional, mpsgraph_lstm_descriptor_bidirectional, mpsgraph_lstm_descriptor_set_bidirectional, "failed to set LSTM bidirectional");
-    bool_getter_setter!(produce_cell, set_produce_cell, mpsgraph_lstm_descriptor_produce_cell, mpsgraph_lstm_descriptor_set_produce_cell, "failed to set LSTM produceCell");
-    bool_getter_setter!(training, set_training, mpsgraph_lstm_descriptor_training, mpsgraph_lstm_descriptor_set_training, "failed to set LSTM training");
-    bool_getter_setter!(forget_gate_last, set_forget_gate_last, mpsgraph_lstm_descriptor_forget_gate_last, mpsgraph_lstm_descriptor_set_forget_gate_last, "failed to set LSTM forgetGateLast");
-    activation_getter_setter!(input_gate_activation, set_input_gate_activation, mpsgraph_lstm_descriptor_input_gate_activation, mpsgraph_lstm_descriptor_set_input_gate_activation, "failed to set LSTM inputGateActivation");
-    activation_getter_setter!(forget_gate_activation, set_forget_gate_activation, mpsgraph_lstm_descriptor_forget_gate_activation, mpsgraph_lstm_descriptor_set_forget_gate_activation, "failed to set LSTM forgetGateActivation");
-    activation_getter_setter!(cell_gate_activation, set_cell_gate_activation, mpsgraph_lstm_descriptor_cell_gate_activation, mpsgraph_lstm_descriptor_set_cell_gate_activation, "failed to set LSTM cellGateActivation");
-    activation_getter_setter!(output_gate_activation, set_output_gate_activation, mpsgraph_lstm_descriptor_output_gate_activation, mpsgraph_lstm_descriptor_set_output_gate_activation, "failed to set LSTM outputGateActivation");
-    activation_getter_setter!(activation, set_activation, mpsgraph_lstm_descriptor_activation, mpsgraph_lstm_descriptor_set_activation, "failed to set LSTM activation");
+    bool_getter_setter!(
+        reverse,
+        set_reverse,
+        mpsgraph_lstm_descriptor_reverse,
+        mpsgraph_lstm_descriptor_set_reverse,
+        "failed to set LSTM reverse"
+    );
+    bool_getter_setter!(
+        bidirectional,
+        set_bidirectional,
+        mpsgraph_lstm_descriptor_bidirectional,
+        mpsgraph_lstm_descriptor_set_bidirectional,
+        "failed to set LSTM bidirectional"
+    );
+    bool_getter_setter!(
+        produce_cell,
+        set_produce_cell,
+        mpsgraph_lstm_descriptor_produce_cell,
+        mpsgraph_lstm_descriptor_set_produce_cell,
+        "failed to set LSTM produceCell"
+    );
+    bool_getter_setter!(
+        training,
+        set_training,
+        mpsgraph_lstm_descriptor_training,
+        mpsgraph_lstm_descriptor_set_training,
+        "failed to set LSTM training"
+    );
+    bool_getter_setter!(
+        forget_gate_last,
+        set_forget_gate_last,
+        mpsgraph_lstm_descriptor_forget_gate_last,
+        mpsgraph_lstm_descriptor_set_forget_gate_last,
+        "failed to set LSTM forgetGateLast"
+    );
+    activation_getter_setter!(
+        input_gate_activation,
+        set_input_gate_activation,
+        mpsgraph_lstm_descriptor_input_gate_activation,
+        mpsgraph_lstm_descriptor_set_input_gate_activation,
+        "failed to set LSTM inputGateActivation"
+    );
+    activation_getter_setter!(
+        forget_gate_activation,
+        set_forget_gate_activation,
+        mpsgraph_lstm_descriptor_forget_gate_activation,
+        mpsgraph_lstm_descriptor_set_forget_gate_activation,
+        "failed to set LSTM forgetGateActivation"
+    );
+    activation_getter_setter!(
+        cell_gate_activation,
+        set_cell_gate_activation,
+        mpsgraph_lstm_descriptor_cell_gate_activation,
+        mpsgraph_lstm_descriptor_set_cell_gate_activation,
+        "failed to set LSTM cellGateActivation"
+    );
+    activation_getter_setter!(
+        output_gate_activation,
+        set_output_gate_activation,
+        mpsgraph_lstm_descriptor_output_gate_activation,
+        mpsgraph_lstm_descriptor_set_output_gate_activation,
+        "failed to set LSTM outputGateActivation"
+    );
+    activation_getter_setter!(
+        activation,
+        set_activation,
+        mpsgraph_lstm_descriptor_activation,
+        mpsgraph_lstm_descriptor_set_activation,
+        "failed to set LSTM activation"
+    );
 }
 
 descriptor_handle!(GRUDescriptor);
@@ -161,15 +245,69 @@ impl GRUDescriptor {
         }
     }
 
-    bool_getter_setter!(reverse, set_reverse, mpsgraph_gru_descriptor_reverse, mpsgraph_gru_descriptor_set_reverse, "failed to set GRU reverse");
-    bool_getter_setter!(bidirectional, set_bidirectional, mpsgraph_gru_descriptor_bidirectional, mpsgraph_gru_descriptor_set_bidirectional, "failed to set GRU bidirectional");
-    bool_getter_setter!(training, set_training, mpsgraph_gru_descriptor_training, mpsgraph_gru_descriptor_set_training, "failed to set GRU training");
-    bool_getter_setter!(reset_gate_first, set_reset_gate_first, mpsgraph_gru_descriptor_reset_gate_first, mpsgraph_gru_descriptor_set_reset_gate_first, "failed to set GRU resetGateFirst");
-    bool_getter_setter!(reset_after, set_reset_after, mpsgraph_gru_descriptor_reset_after, mpsgraph_gru_descriptor_set_reset_after, "failed to set GRU resetAfter");
-    bool_getter_setter!(flip_z, set_flip_z, mpsgraph_gru_descriptor_flip_z, mpsgraph_gru_descriptor_set_flip_z, "failed to set GRU flipZ");
-    activation_getter_setter!(update_gate_activation, set_update_gate_activation, mpsgraph_gru_descriptor_update_gate_activation, mpsgraph_gru_descriptor_set_update_gate_activation, "failed to set GRU updateGateActivation");
-    activation_getter_setter!(reset_gate_activation, set_reset_gate_activation, mpsgraph_gru_descriptor_reset_gate_activation, mpsgraph_gru_descriptor_set_reset_gate_activation, "failed to set GRU resetGateActivation");
-    activation_getter_setter!(output_gate_activation, set_output_gate_activation, mpsgraph_gru_descriptor_output_gate_activation, mpsgraph_gru_descriptor_set_output_gate_activation, "failed to set GRU outputGateActivation");
+    bool_getter_setter!(
+        reverse,
+        set_reverse,
+        mpsgraph_gru_descriptor_reverse,
+        mpsgraph_gru_descriptor_set_reverse,
+        "failed to set GRU reverse"
+    );
+    bool_getter_setter!(
+        bidirectional,
+        set_bidirectional,
+        mpsgraph_gru_descriptor_bidirectional,
+        mpsgraph_gru_descriptor_set_bidirectional,
+        "failed to set GRU bidirectional"
+    );
+    bool_getter_setter!(
+        training,
+        set_training,
+        mpsgraph_gru_descriptor_training,
+        mpsgraph_gru_descriptor_set_training,
+        "failed to set GRU training"
+    );
+    bool_getter_setter!(
+        reset_gate_first,
+        set_reset_gate_first,
+        mpsgraph_gru_descriptor_reset_gate_first,
+        mpsgraph_gru_descriptor_set_reset_gate_first,
+        "failed to set GRU resetGateFirst"
+    );
+    bool_getter_setter!(
+        reset_after,
+        set_reset_after,
+        mpsgraph_gru_descriptor_reset_after,
+        mpsgraph_gru_descriptor_set_reset_after,
+        "failed to set GRU resetAfter"
+    );
+    bool_getter_setter!(
+        flip_z,
+        set_flip_z,
+        mpsgraph_gru_descriptor_flip_z,
+        mpsgraph_gru_descriptor_set_flip_z,
+        "failed to set GRU flipZ"
+    );
+    activation_getter_setter!(
+        update_gate_activation,
+        set_update_gate_activation,
+        mpsgraph_gru_descriptor_update_gate_activation,
+        mpsgraph_gru_descriptor_set_update_gate_activation,
+        "failed to set GRU updateGateActivation"
+    );
+    activation_getter_setter!(
+        reset_gate_activation,
+        set_reset_gate_activation,
+        mpsgraph_gru_descriptor_reset_gate_activation,
+        mpsgraph_gru_descriptor_set_reset_gate_activation,
+        "failed to set GRU resetGateActivation"
+    );
+    activation_getter_setter!(
+        output_gate_activation,
+        set_output_gate_activation,
+        mpsgraph_gru_descriptor_output_gate_activation,
+        mpsgraph_gru_descriptor_set_output_gate_activation,
+        "failed to set GRU outputGateActivation"
+    );
 }
 
 impl crate::graph::Graph {

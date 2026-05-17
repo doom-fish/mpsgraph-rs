@@ -1,7 +1,5 @@
 use apple_metal::MetalDevice;
-use apple_mpsgraph::{
-    data_type, Feed, Graph, ReductionAxesOp, TensorData, UnaryArithmeticOp,
-};
+use apple_mpsgraph::{data_type, Feed, Graph, ReductionAxesOp, TensorData, UnaryArithmeticOp};
 
 fn main() {
     let device = MetalDevice::system_default().expect("no Metal device available");
@@ -24,5 +22,8 @@ fn main() {
         .expect("run");
 
     println!("row sums: {:?}", results[0].read_f32().expect("row sums"));
-    println!("top-k values: {:?}", results[1].read_f32().expect("topk values"));
+    println!(
+        "top-k values: {:?}",
+        results[1].read_f32().expect("topk values")
+    );
 }
