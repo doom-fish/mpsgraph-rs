@@ -44,6 +44,10 @@ pub mod tensor_named_data_layout {
     pub const CHW: usize = 4;
     pub const HWC: usize = 5;
     pub const HW: usize = 6;
+    pub const NCDHW: usize = 7;
+    pub const NDHWC: usize = 8;
+    pub const OIDHW: usize = 9;
+    pub const DHWIO: usize = 10;
 }
 
 /// `MPSGraphPaddingStyle` constants.
@@ -53,6 +57,17 @@ pub mod padding_style {
     pub const TF_SAME: usize = 2;
     pub const EXPLICIT_OFFSET: usize = 3;
     pub const ONNX_SAME_LOWER: usize = 4;
+}
+
+/// `MPSGraphPaddingMode` constants.
+pub mod padding_mode {
+    pub const CONSTANT: isize = 0;
+    pub const REFLECT: isize = 1;
+    pub const SYMMETRIC: isize = 2;
+    pub const CLAMP_TO_EDGE: isize = 3;
+    pub const ZERO: isize = 4;
+    pub const PERIODIC: isize = 5;
+    pub const ANTI_PERIODIC: isize = 6;
 }
 
 macro_rules! opaque_handle {

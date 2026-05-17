@@ -1,10 +1,10 @@
 # mpsgraph-rs coverage audit (vs MacOSX26.2.sdk)
 
 SDK_PUBLIC_SYMBOLS: 90
-VERIFIED: 47
-GAPS: 43
+VERIFIED: 90
+GAPS: 0
 EXEMPT: 0
-COVERAGE_PCT: 52.22%
+COVERAGE_PCT: 100.00%
 
 Scope: top-level Objective-C interfaces/categories and enum types from `MetalPerformanceShadersGraph.framework/Headers`, filtered for macOS availability. This framework exposes no top-level `FOUNDATION_EXPORT`, `extern const`, or free C function declarations in the audited headers.
 
@@ -59,52 +59,57 @@ Scope: top-level Objective-C interfaces/categories and enum types from `MetalPer
 | `MPSGraph(MPSGraphTensorShapeOps)` | category | `MPSGraphTensorShapeOps.h` | `Graph::{reshape,transpose,slice,broadcast}` in `src/graph.rs` plus concat/split/stack/pad in `src/ops.rs`. |
 | `MPSGraph(MPSGraphTopKOps)` | category | `MPSGraphTopKOps.h` | `Graph::{top_k,top_k_tensor}` in `src/ops.rs`. |
 
+## 🟢 VERIFIED IN v0.2.3
+| Symbol | Kind | Header | Wrapped by |
+| --- | --- | --- | --- |
+| `MPSGraphExecutionStage` | enum | `MPSGraph.h` | `execution_stage` module plus raw shared-event wait/signal helpers on `ExecutionDescriptor` and `ExecutableExecutionDescriptor` in `src/specialized.rs`. |
+| `MPSGraphConvolution3DOpDescriptor` | interface | `MPSGraphConvolutionOps.h` | `Convolution3DDescriptor` / `Convolution3DDescriptorInfo` in `src/specialized.rs`. |
+| `MPSGraph(MPSGraphConvolutionTransposeOps)` | category | `MPSGraphConvolutionTransposeOps.h` | `Graph::convolution_transpose2d` in `src/specialized.rs`. |
+| `MPSGraphObject` | interface | `MPSGraphCore.h` | `Object` in `src/specialized.rs`. |
+| `MPSGraphType` | interface | `MPSGraphCore.h` | `GraphType` in `src/specialized.rs` plus `ShapedType::as_graph_type`. |
+| `MPSGraphReductionMode` | enum | `MPSGraphCore.h` | `reduction_mode` module plus `StencilDescriptorInfo::reduction_mode` in `src/specialized.rs`. |
+| `MPSGraph(MPSGraphCumulativeOps)` | category | `MPSGraphCumulativeOps.h` | `Graph::cumulative_sum` in `src/specialized.rs`. |
+| `MPSGraphDepthwiseConvolution2DOpDescriptor` | interface | `MPSGraphDepthwiseConvolutionOps.h` | `DepthwiseConvolution2DDescriptor` / `DepthwiseConvolution2DDescriptorInfo` in `src/specialized.rs`. |
+| `MPSGraphDepthwiseConvolution3DOpDescriptor` | interface | `MPSGraphDepthwiseConvolutionOps.h` | `DepthwiseConvolution3DDescriptor` / `DepthwiseConvolution3DDescriptorInfo` in `src/specialized.rs`. |
+| `MPSGraph(MPSGraphDepthwiseConvolutionOps)` | category | `MPSGraphDepthwiseConvolutionOps.h` | `Graph::{depthwise_convolution2d,depthwise_convolution3d}` in `src/specialized.rs`. |
+| `MPSGraphFFTScalingMode` | enum | `MPSGraphFourierTransformOps.h` | `fft_scaling_mode` module plus `FftDescriptorInfo::scaling_mode` in `src/specialized.rs`. |
+| `MPSGraphFFTDescriptor` | interface | `MPSGraphFourierTransformOps.h` | `FftDescriptor` / `FftDescriptorInfo` in `src/specialized.rs`. |
+| `MPSGraph(MPSGraphFourierTransformOps)` | category | `MPSGraphFourierTransformOps.h` | `Graph::fast_fourier_transform` in `src/specialized.rs`. |
+| `MPSGraphImToColOpDescriptor` | interface | `MPSGraphImToColOps.h` | `ImToColDescriptor` / `ImToColDescriptorInfo` in `src/specialized.rs`. |
+| `MPSGraph(MPSGraphImToColOps)` | category | `MPSGraphImToColOps.h` | `Graph::im_to_col` in `src/specialized.rs`. |
+| `MPSGraph(MPSGraphLinearAlgebraOps)` | category | `MPSGraphLinearAlgebraOps.h` | `Graph::band_part` in `src/specialized.rs`. |
+| `MPSGraphLossReductionType` | enum | `MPSGraphLossOps.h` | `loss_reduction_type` module plus `Graph::softmax_cross_entropy` in `src/specialized.rs`. |
+| `MPSGraph(MPSGraphLossOps)` | category | `MPSGraphLossOps.h` | `Graph::softmax_cross_entropy` in `src/specialized.rs`. |
+| `MPSGraph(MPSGraphMatrixInverseOps)` | category | `MPSGraphMatrixInverseOps.h` | `Graph::matrix_inverse` in `src/specialized.rs`. |
+| `MPSGraphVariableOp` | interface | `MPSGraphMemoryOps.h` | `VariableOp` in `src/specialized.rs` plus `Operation::as_variable` and `Graph::{variable_bytes,variable_f32_slice,read_variable,assign_variable}`. |
+| `MPSGraphNonMaximumSuppressionCoordinateMode` | enum | `MPSGraphNonMaximumSuppressionOps.h` | `non_maximum_suppression_coordinate_mode` module plus `Graph::non_maximum_suppression` in `src/specialized.rs`. |
+| `MPSGraph(MPSGraphNonMaximumSuppressionOps)` | category | `MPSGraphNonMaximumSuppressionOps.h` | `Graph::non_maximum_suppression` in `src/specialized.rs`. |
+| `MPSGraph(NonZeroOps)` | category | `MPSGraphNonZeroOps.h` | `Graph::non_zero_indices` in `src/specialized.rs`. |
+| `MPSGraph(MPSGraphOneHotOps)` | category | `MPSGraphOneHotOps.h` | `Graph::one_hot` in `src/specialized.rs`. |
+| `MPSGraph(MPSGraphOptimizerOps)` | category | `MPSGraphOptimizerOps.h` | `Graph::stochastic_gradient_descent` in `src/specialized.rs`. |
+| `MPSGraphPoolingReturnIndicesMode` | enum | `MPSGraphPoolingOps.h` | `pooling_return_indices_mode` module plus `Pooling4DDescriptorInfo::return_indices_mode` in `src/specialized.rs`. |
+| `MPSGraphPooling4DOpDescriptor` | interface | `MPSGraphPoolingOps.h` | `Pooling4DDescriptor` / `Pooling4DDescriptorInfo` in `src/specialized.rs`. |
+| `MPSGraph(MPSGraphQuantizationOps)` | category | `MPSGraphQuantizationOps.h` | `Graph::{quantize,dequantize}` in `src/specialized.rs`. |
+| `MPSGraphResizeMode` | enum | `MPSGraphResizeOps.h` | `resize_mode` module plus `Graph::{resize,sample_grid}` in `src/specialized.rs`. |
+| `MPSGraphResizeNearestRoundingMode` | enum | `MPSGraphResizeOps.h` | `resize_nearest_rounding_mode` module plus `Graph::resize_nearest` in `src/specialized.rs`. |
+| `MPSGraph(MPSGraphResizeOps)` | category | `MPSGraphResizeOps.h` | `Graph::{resize,resize_nearest}` in `src/specialized.rs`. |
+| `MPSGraph(MPSGraphSampleGrid)` | category | `MPSGraphSampleGridOps.h` | `Graph::sample_grid` in `src/specialized.rs`. |
+| `MPSGraphScatterMode` | enum | `MPSGraphScatterNDOps.h` | `scatter_mode` module plus `Graph::{scatter_nd,scatter,scatter_along_axis}` in `src/specialized.rs`. |
+| `MPSGraph(ScatterNDOps)` | category | `MPSGraphScatterNDOps.h` | `Graph::scatter_nd` in `src/specialized.rs`. |
+| `MPSGraph(MPSGraphScatterOps)` | category | `MPSGraphScatterNDOps.h` | `Graph::scatter` in `src/specialized.rs`. |
+| `MPSGraph(MPSGraphScatterAlongAxisOps)` | category | `MPSGraphScatterNDOps.h` | `Graph::scatter_along_axis` in `src/specialized.rs`. |
+| `MPSGraph(MPSGraphSortOps)` | category | `MPSGraphSortOps.h` | `Graph::{sort,arg_sort}` in `src/specialized.rs`. |
+| `MPSGraphSparseStorageType` | enum | `MPSGraphSparseOps.h` | `sparse_storage_type` module plus `CreateSparseDescriptor::new` in `src/specialized.rs`. |
+| `MPSGraphCreateSparseOpDescriptor` | interface | `MPSGraphSparseOps.h` | `CreateSparseDescriptor` in `src/specialized.rs`. |
+| `MPSGraph(MPSGraphSparseOps)` | category | `MPSGraphSparseOps.h` | `Graph::sparse_tensor_with_descriptor` in `src/specialized.rs`. |
+| `MPSGraphStencilOpDescriptor` | interface | `MPSGraphStencilOps.h` | `StencilDescriptor` / `StencilDescriptorInfo` in `src/specialized.rs`. |
+| `MPSGraph(MPSGraphStencilOps)` | category | `MPSGraphStencilOps.h` | `Graph::stencil` in `src/specialized.rs`. |
+| `MPSGraph(MPSGraphTopKGradientOps)` | category | `MPSGraphTopKOps.h` | `Graph::top_k_gradient` in `src/specialized.rs`. |
+
 ## 🔴 GAPS
 | Symbol | Kind | Header | Notes |
 | --- | --- | --- | --- |
-| `MPSGraphExecutionStage` | enum | `MPSGraph.h` | Shared-event signaling/waiting APIs are not wrapped, so the execution-stage enum is unreachable. |
-| `MPSGraphConvolution3DOpDescriptor` | interface | `MPSGraphConvolutionOps.h` | Only the 2D convolution descriptor/path is wrapped. |
-| `MPSGraph(MPSGraphConvolutionTransposeOps)` | category | `MPSGraphConvolutionTransposeOps.h` | Transpose-convolution APIs are not wrapped. |
-| `MPSGraphObject` | interface | `MPSGraphCore.h` | The common Objective-C base class is not exposed as a standalone Rust type. |
-| `MPSGraphType` | interface | `MPSGraphCore.h` | The crate exposes `ShapedType`, but not the generic `MPSGraphType` base class. |
-| `MPSGraphReductionMode` | enum | `MPSGraphCore.h` | The crate exposes concrete reduction helpers instead of the generic reduction-mode enum. |
-| `MPSGraph(MPSGraphCumulativeOps)` | category | `MPSGraphCumulativeOps.h` | Cumulative-sum / cumulative-product style ops are not wrapped. |
-| `MPSGraphDepthwiseConvolution2DOpDescriptor` | interface | `MPSGraphDepthwiseConvolutionOps.h` | Depthwise-convolution APIs are not wrapped. |
-| `MPSGraphDepthwiseConvolution3DOpDescriptor` | interface | `MPSGraphDepthwiseConvolutionOps.h` | Depthwise-convolution APIs are not wrapped. |
-| `MPSGraph(MPSGraphDepthwiseConvolutionOps)` | category | `MPSGraphDepthwiseConvolutionOps.h` | Depthwise-convolution APIs are not wrapped. |
-| `MPSGraphFFTScalingMode` | enum | `MPSGraphFourierTransformOps.h` | FFT APIs are not wrapped. |
-| `MPSGraphFFTDescriptor` | interface | `MPSGraphFourierTransformOps.h` | FFT APIs are not wrapped. |
-| `MPSGraph(MPSGraphFourierTransformOps)` | category | `MPSGraphFourierTransformOps.h` | FFT APIs are not wrapped. |
-| `MPSGraphImToColOpDescriptor` | interface | `MPSGraphImToColOps.h` | Im2Col/Col2Im APIs are not wrapped. |
-| `MPSGraph(MPSGraphImToColOps)` | category | `MPSGraphImToColOps.h` | Im2Col / Col2Im APIs are not wrapped. |
-| `MPSGraph(MPSGraphLinearAlgebraOps)` | category | `MPSGraphLinearAlgebraOps.h` | Linear-algebra helpers beyond plain matmul are not wrapped. |
-| `MPSGraphLossReductionType` | enum | `MPSGraphLossOps.h` | Loss APIs are not wrapped. |
-| `MPSGraph(MPSGraphLossOps)` | category | `MPSGraphLossOps.h` | Loss APIs are not wrapped. |
-| `MPSGraph(MPSGraphMatrixInverseOps)` | category | `MPSGraphMatrixInverseOps.h` | Matrix-inverse / solve APIs are not wrapped. |
-| `MPSGraphVariableOp` | interface | `MPSGraphMemoryOps.h` | Variable/read/assign memory ops are not exposed. |
-| `MPSGraphNonMaximumSuppressionCoordinateMode` | enum | `MPSGraphNonMaximumSuppressionOps.h` | Non-maximum-suppression APIs are not wrapped. |
-| `MPSGraph(MPSGraphNonMaximumSuppressionOps)` | category | `MPSGraphNonMaximumSuppressionOps.h` | Non-maximum-suppression APIs are not wrapped. |
-| `MPSGraph(NonZeroOps)` | category | `MPSGraphNonZeroOps.h` | NonZero APIs are not wrapped. |
-| `MPSGraph(MPSGraphOneHotOps)` | category | `MPSGraphOneHotOps.h` | One-hot APIs are not wrapped. |
-| `MPSGraph(MPSGraphOptimizerOps)` | category | `MPSGraphOptimizerOps.h` | Optimizer update APIs (SGD/Adam/etc.) are not wrapped. |
-| `MPSGraphPoolingReturnIndicesMode` | enum | `MPSGraphPoolingOps.h` | Only plain max-pooling is wrapped; return-indices pooling modes are not surfaced. |
-| `MPSGraphPooling4DOpDescriptor` | interface | `MPSGraphPoolingOps.h` | Only the 2D pooling descriptor/path is wrapped. |
-| `MPSGraph(MPSGraphQuantizationOps)` | category | `MPSGraphQuantizationOps.h` | Quantize/dequantize APIs are not wrapped. |
-| `MPSGraphResizeMode` | enum | `MPSGraphResizeOps.h` | Resize APIs are not wrapped. |
-| `MPSGraphResizeNearestRoundingMode` | enum | `MPSGraphResizeOps.h` | Resize-nearest APIs are not wrapped. |
-| `MPSGraph(MPSGraphResizeOps)` | category | `MPSGraphResizeOps.h` | Resize APIs are not wrapped. |
-| `MPSGraph(MPSGraphSampleGrid)` | category | `MPSGraphSampleGridOps.h` | Sample-grid APIs are not wrapped. |
-| `MPSGraphScatterMode` | enum | `MPSGraphScatterNDOps.h` | Scatter/ScatterND APIs are not wrapped. |
-| `MPSGraph(ScatterNDOps)` | category | `MPSGraphScatterNDOps.h` | Scatter / ScatterND APIs are not wrapped. |
-| `MPSGraph(MPSGraphScatterOps)` | category | `MPSGraphScatterNDOps.h` | Scatter / ScatterND APIs are not wrapped. |
-| `MPSGraph(MPSGraphScatterAlongAxisOps)` | category | `MPSGraphScatterNDOps.h` | Scatter / ScatterND APIs are not wrapped. |
-| `MPSGraph(MPSGraphSortOps)` | category | `MPSGraphSortOps.h` | Sort / argsort APIs are not wrapped. |
-| `MPSGraphSparseStorageType` | enum | `MPSGraphSparseOps.h` | Sparse-tensor APIs are not wrapped. |
-| `MPSGraphCreateSparseOpDescriptor` | interface | `MPSGraphSparseOps.h` | Sparse-tensor APIs are not wrapped. |
-| `MPSGraph(MPSGraphSparseOps)` | category | `MPSGraphSparseOps.h` | Sparse-tensor APIs are not wrapped. |
-| `MPSGraphStencilOpDescriptor` | interface | `MPSGraphStencilOps.h` | Stencil APIs are not wrapped. |
-| `MPSGraph(MPSGraphStencilOps)` | category | `MPSGraphStencilOps.h` | Stencil APIs are not wrapped. |
-| `MPSGraph(MPSGraphTopKGradientOps)` | category | `MPSGraphTopKOps.h` | Only `topK` and `topK(kTensor:)` are wrapped; axis/bottomK/topKGradient variants are missing. |
+| _(none)_ | - | - | All 90 audited macOS-visible top-level symbols are wrapped in `v0.2.3`. |
 
 ## ⏭️ EXEMPT
 | Symbol | Kind | Header | Reason | SDK attribute |

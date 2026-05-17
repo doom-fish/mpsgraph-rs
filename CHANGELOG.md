@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.3 - 2026-05-17
+
+- Fixed the specialized Swift bridge to construct audited descriptors with `init()` plus property assignment, matching current SDK Swift overlays.
+- Added specialized wrappers for `MPSGraphObject`, `MPSGraphType`, `MPSGraphVariableOp`, `MPSGraphExecutionStage`, convolution-transpose / 3D / depthwise descriptors and ops, FFT, Im2Col, loss, matrix-inverse, variable read/assign, pooling-4D + return indices, quantization, resize, sample-grid, scatter, sort, sparse, stencil, non-zero/NMS, optimizer SGD, and TopK gradient APIs.
+- Added specialized smoke tests and updated the audit/docs to reflect full 90/90 audited SDK coverage.
+
 ## 0.2.1 - 2026-05-16
 
 - Added call-op support via `Graph::call` and `CompilationDescriptor::set_callable`

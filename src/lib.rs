@@ -16,6 +16,7 @@ pub mod graph;
 pub mod ops;
 pub mod random;
 pub mod rnn;
+pub mod specialized;
 pub mod types;
 
 pub use crate::data::TensorData;
@@ -27,9 +28,9 @@ pub use crate::execution::{
     ExecutableSerializationDescriptor, ExecutionDescriptor,
 };
 pub use crate::graph::{
-    data_type, data_type_size, padding_style, tensor_named_data_layout, Convolution2DDescriptor,
-    Convolution2DDescriptorInfo, Executable, Feed, FeedDescription, Graph, Pooling2DDescriptor,
-    Pooling2DDescriptorInfo, Tensor,
+    data_type, data_type_size, padding_mode, padding_style, tensor_named_data_layout,
+    Convolution2DDescriptor, Convolution2DDescriptorInfo, Executable, Feed, FeedDescription,
+    Graph, Pooling2DDescriptor, Pooling2DDescriptorInfo, Tensor,
 };
 pub use crate::ops::{BinaryArithmeticOp, ReductionAxesOp, ReductionAxisOp, UnaryArithmeticOp};
 pub use crate::random::{
@@ -37,5 +38,16 @@ pub use crate::random::{
 };
 pub use crate::rnn::{
     rnn_activation, GRUDescriptor, LSTMDescriptor, SingleGateRNNDescriptor,
+};
+pub use crate::specialized::{
+    execution_stage, fft_scaling_mode, loss_reduction_type,
+    non_maximum_suppression_coordinate_mode, pooling_return_indices_mode, reduction_mode,
+    resize_mode, resize_nearest_rounding_mode, scatter_mode, sparse_storage_type,
+    Convolution3DDescriptor, Convolution3DDescriptorInfo, CreateSparseDescriptor,
+    DepthwiseConvolution2DDescriptor, DepthwiseConvolution2DDescriptorInfo,
+    DepthwiseConvolution3DDescriptor, DepthwiseConvolution3DDescriptorInfo, FftDescriptor,
+    FftDescriptorInfo, GraphType, ImToColDescriptor, ImToColDescriptorInfo, Object,
+    Pooling4DDescriptor, Pooling4DDescriptorInfo, StencilDescriptor, StencilDescriptorInfo,
+    VariableOp,
 };
 pub use crate::types::{graph_device_type, GraphDevice, Operation, ShapedType};

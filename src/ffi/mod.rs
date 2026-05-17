@@ -14,6 +14,9 @@ pub type ForBodyCallback = unsafe extern "C" fn(
     input_box_handle: *mut c_void,
 ) -> *mut c_void;
 
+mod specialized;
+pub use specialized::*;
+
 unsafe extern "C" {
     pub fn mpsgraph_object_release(handle: *mut c_void);
 

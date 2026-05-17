@@ -224,6 +224,12 @@ unsafe extern "C" {
         descriptor_handle: *mut c_void,
         name: *const c_char,
     ) -> *mut c_void;
+    pub fn mpsgraph_graph_max_pooling4d_return_indices(
+        graph_handle: *mut c_void,
+        source_tensor: *mut c_void,
+        descriptor_handle: *mut c_void,
+        name: *const c_char,
+    ) -> *mut c_void;
     pub fn mpsgraph_graph_quantize(
         graph_handle: *mut c_void,
         tensor: *mut c_void,
@@ -246,6 +252,16 @@ unsafe extern "C" {
         size: *const usize,
         size_len: usize,
         mode: usize,
+        center_result: bool,
+        align_corners: bool,
+        layout: usize,
+        name: *const c_char,
+    ) -> *mut c_void;
+    pub fn mpsgraph_graph_resize_nearest(
+        graph_handle: *mut c_void,
+        images_tensor: *mut c_void,
+        size_tensor: *mut c_void,
+        nearest_rounding_mode: usize,
         center_result: bool,
         align_corners: bool,
         layout: usize,
@@ -301,6 +317,13 @@ unsafe extern "C" {
         descending: bool,
         name: *const c_char,
     ) -> *mut c_void;
+    pub fn mpsgraph_graph_arg_sort(
+        graph_handle: *mut c_void,
+        tensor: *mut c_void,
+        axis: isize,
+        descending: bool,
+        name: *const c_char,
+    ) -> *mut c_void;
     pub fn mpsgraph_graph_sparse_tensor_with_descriptor(
         graph_handle: *mut c_void,
         descriptor_handle: *mut c_void,
@@ -324,4 +347,27 @@ unsafe extern "C" {
         k: usize,
         name: *const c_char,
     ) -> *mut c_void;
+
+    pub fn mpsgraph_execution_descriptor_wait_for_event(
+        handle: *mut c_void,
+        event_handle: *mut c_void,
+        value: u64,
+    ) -> bool;
+    pub fn mpsgraph_execution_descriptor_signal_event(
+        handle: *mut c_void,
+        event_handle: *mut c_void,
+        execution_stage: u64,
+        value: u64,
+    ) -> bool;
+    pub fn mpsgraph_executable_execution_descriptor_wait_for_event(
+        handle: *mut c_void,
+        event_handle: *mut c_void,
+        value: u64,
+    ) -> bool;
+    pub fn mpsgraph_executable_execution_descriptor_signal_event(
+        handle: *mut c_void,
+        event_handle: *mut c_void,
+        execution_stage: u64,
+        value: u64,
+    ) -> bool;
 }

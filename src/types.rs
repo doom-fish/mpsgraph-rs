@@ -238,6 +238,11 @@ impl Drop for Operation {
 
 impl Operation {
     #[must_use]
+    pub(crate) const fn from_raw(ptr: *mut c_void) -> Self {
+        Self { ptr }
+    }
+
+    #[must_use]
     pub const fn as_ptr(&self) -> *mut c_void {
         self.ptr
     }

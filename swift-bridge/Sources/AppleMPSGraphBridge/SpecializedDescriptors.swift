@@ -1,4 +1,5 @@
 import Foundation
+import Metal
 import MetalPerformanceShadersGraph
 
 @_cdecl("mpsgraph_object_retain")
@@ -20,11 +21,13 @@ func mpsgraph_reduction_mode(_ rawValue: UInt) -> MPSGraphReductionMode? {
     MPSGraphReductionMode(rawValue: rawValue)
 }
 
+@available(macOS 12.2, *)
 @inline(__always)
 func mpsgraph_pooling_return_indices_mode(_ rawValue: UInt) -> MPSGraphPoolingReturnIndicesMode? {
     MPSGraphPoolingReturnIndicesMode(rawValue: rawValue)
 }
 
+@available(macOS 14.0, *)
 @inline(__always)
 func mpsgraph_fft_scaling_mode(_ rawValue: UInt) -> MPSGraphFFTScalingMode? {
     MPSGraphFFTScalingMode(rawValue: rawValue)
@@ -37,7 +40,12 @@ func mpsgraph_resize_mode(_ rawValue: UInt) -> MPSGraphResizeMode? {
 
 @inline(__always)
 func mpsgraph_resize_nearest_rounding_mode(_ rawValue: UInt) -> MPSGraphResizeNearestRoundingMode? {
-    MPSGraphResizeNearestRoundingMode(rawValue: rawValue)
+    if rawValue >= 4 {
+        guard #available(macOS 13.2, *) else {
+            return nil
+        }
+    }
+    return MPSGraphResizeNearestRoundingMode(rawValue: rawValue)
 }
 
 @inline(__always)
@@ -50,6 +58,7 @@ func mpsgraph_sparse_storage_type(_ rawValue: UInt64) -> MPSGraphSparseStorageTy
     MPSGraphSparseStorageType(rawValue: rawValue)
 }
 
+@available(macOS 14.0, *)
 @inline(__always)
 func mpsgraph_nms_coordinate_mode(_ rawValue: UInt) -> MPSGraphNonMaximumSuppressionCoordinateMode? {
     MPSGraphNonMaximumSuppressionCoordinateMode(rawValue: rawValue)
@@ -57,7 +66,22 @@ func mpsgraph_nms_coordinate_mode(_ rawValue: UInt) -> MPSGraphNonMaximumSuppres
 
 @inline(__always)
 func mpsgraph_loss_reduction_type(_ rawValue: UInt64) -> MPSGraphLossReductionType? {
-    MPSGraphLossReductionType(rawValue: rawValue)
+    switch rawValue {
+    case 0:
+        if #available(macOS 14.0, *) {
+            return MPSGraphLossReductionType.none
+        }
+        return .axis
+    case 1:
+        return .sum
+    case 2:
+        guard #available(macOS 12.0, *) else {
+            return nil
+        }
+        return .mean
+    default:
+        return nil
+    }
 }
 
 @_cdecl("mpsgraph_operation_as_variable")
@@ -129,28 +153,28 @@ public func mpsgraph_convolution3d_descriptor_new(
     guard
         let paddingStyle = mpsgraph_padding_style(paddingStyleRaw),
         let dataLayout = mpsgraph_data_layout(dataLayoutRaw),
-        let weightsLayout = mpsgraph_data_layout(weightsLayoutRaw),
-        let descriptor = MPSGraphConvolution3DOpDescriptor.descriptor(
-            withStrideInX: strideInX,
-            strideInY: strideInY,
-            strideInZ: strideInZ,
-            dilationRateInX: dilationRateInX,
-            dilationRateInY: dilationRateInY,
-            dilationRateInZ: dilationRateInZ,
-            groups: groups,
-            paddingLeft: paddingLeft,
-            paddingRight: paddingRight,
-            paddingTop: paddingTop,
-            paddingBottom: paddingBottom,
-            paddingFront: paddingFront,
-            paddingBack: paddingBack,
-            paddingStyle: paddingStyle,
-            dataLayout: dataLayout,
-            weightsLayout: weightsLayout
-        )
+        let weightsLayout = mpsgraph_data_layout(weightsLayoutRaw)
     else {
         return nil
     }
+
+    let descriptor = MPSGraphConvolution3DOpDescriptor()
+    descriptor.strideInX = strideInX
+    descriptor.strideInY = strideInY
+    descriptor.strideInZ = strideInZ
+    descriptor.dilationRateInX = dilationRateInX
+    descriptor.dilationRateInY = dilationRateInY
+    descriptor.dilationRateInZ = dilationRateInZ
+    descriptor.groups = groups
+    descriptor.paddingLeft = paddingLeft
+    descriptor.paddingRight = paddingRight
+    descriptor.paddingTop = paddingTop
+    descriptor.paddingBottom = paddingBottom
+    descriptor.paddingFront = paddingFront
+    descriptor.paddingBack = paddingBack
+    descriptor.paddingStyle = paddingStyle
+    descriptor.dataLayout = dataLayout
+    descriptor.weightsLayout = weightsLayout
     return mpsgraph_retain(descriptor)
 }
 
@@ -171,23 +195,23 @@ public func mpsgraph_depthwise_convolution2d_descriptor_new(
     guard
         let paddingStyle = mpsgraph_padding_style(paddingStyleRaw),
         let dataLayout = mpsgraph_data_layout(dataLayoutRaw),
-        let weightsLayout = mpsgraph_data_layout(weightsLayoutRaw),
-        let descriptor = MPSGraphDepthwiseConvolution2DOpDescriptor.descriptor(
-            withStrideInX: strideInX,
-            strideInY: strideInY,
-            dilationRateInX: dilationRateInX,
-            dilationRateInY: dilationRateInY,
-            paddingLeft: paddingLeft,
-            paddingRight: paddingRight,
-            paddingTop: paddingTop,
-            paddingBottom: paddingBottom,
-            paddingStyle: paddingStyle,
-            dataLayout: dataLayout,
-            weightsLayout: weightsLayout
-        )
+        let weightsLayout = mpsgraph_data_layout(weightsLayoutRaw)
     else {
         return nil
     }
+
+    let descriptor = MPSGraphDepthwiseConvolution2DOpDescriptor()
+    descriptor.strideInX = strideInX
+    descriptor.strideInY = strideInY
+    descriptor.dilationRateInX = dilationRateInX
+    descriptor.dilationRateInY = dilationRateInY
+    descriptor.paddingLeft = paddingLeft
+    descriptor.paddingRight = paddingRight
+    descriptor.paddingTop = paddingTop
+    descriptor.paddingBottom = paddingBottom
+    descriptor.paddingStyle = paddingStyle
+    descriptor.dataLayout = dataLayout
+    descriptor.weightsLayout = weightsLayout
     return mpsgraph_retain(descriptor)
 }
 
@@ -206,16 +230,16 @@ public func mpsgraph_depthwise_convolution3d_descriptor_new(
         return nil
     }
     guard stridesLen == 3, dilationRatesLen == 3, paddingValuesLen == 6,
-          let paddingStyle = mpsgraph_padding_style(paddingStyleRaw),
-          let descriptor = MPSGraphDepthwiseConvolution3DOpDescriptor.descriptor(
-            withStrides: mpsgraph_shape(strides, stridesLen),
-            dilationRates: mpsgraph_shape(dilationRates, dilationRatesLen),
-            paddingValues: mpsgraph_shape(paddingValues, paddingValuesLen),
-            paddingStyle: paddingStyle
-          )
+          let paddingStyle = mpsgraph_padding_style(paddingStyleRaw)
     else {
         return nil
     }
+
+    let descriptor = MPSGraphDepthwiseConvolution3DOpDescriptor()
+    descriptor.strides = mpsgraph_shape(strides, stridesLen)
+    descriptor.dilationRates = mpsgraph_shape(dilationRates, dilationRatesLen)
+    descriptor.paddingValues = mpsgraph_shape(paddingValues, paddingValuesLen)
+    descriptor.paddingStyle = paddingStyle
     descriptor.channelDimensionIndex = channelDimensionIndex
     return mpsgraph_retain(descriptor)
 }
@@ -229,11 +253,11 @@ public func mpsgraph_fft_descriptor_new(
     guard #available(macOS 14.0, *) else {
         return nil
     }
-    guard let descriptor = MPSGraphFFTDescriptor.descriptor(),
-          let scalingMode = mpsgraph_fft_scaling_mode(scalingModeRaw)
-    else {
+    guard let scalingMode = mpsgraph_fft_scaling_mode(scalingModeRaw) else {
         return nil
     }
+
+    let descriptor = MPSGraphFFTDescriptor()
     descriptor.inverse = inverse
     descriptor.scalingMode = scalingMode
     descriptor.roundToOddHermitean = roundToOddHermitean
@@ -257,23 +281,22 @@ public func mpsgraph_im_to_col_descriptor_new(
     guard #available(macOS 14.0, *) else {
         return nil
     }
-    guard let dataLayout = mpsgraph_data_layout(dataLayoutRaw),
-          let descriptor = MPSGraphImToColOpDescriptor.descriptor(
-            withKernelWidth: kernelWidth,
-            kernelHeight: kernelHeight,
-            strideInX: strideInX,
-            strideInY: strideInY,
-            dilationRateInX: dilationRateInX,
-            dilationRateInY: dilationRateInY,
-            paddingLeft: paddingLeft,
-            paddingRight: paddingRight,
-            paddingTop: paddingTop,
-            paddingBottom: paddingBottom,
-            dataLayout: dataLayout
-          )
-    else {
+    guard let dataLayout = mpsgraph_data_layout(dataLayoutRaw) else {
         return nil
     }
+
+    let descriptor = MPSGraphImToColOpDescriptor()
+    descriptor.kernelWidth = kernelWidth
+    descriptor.kernelHeight = kernelHeight
+    descriptor.strideInX = strideInX
+    descriptor.strideInY = strideInY
+    descriptor.dilationRateInX = dilationRateInX
+    descriptor.dilationRateInY = dilationRateInY
+    descriptor.paddingLeft = paddingLeft
+    descriptor.paddingRight = paddingRight
+    descriptor.paddingTop = paddingTop
+    descriptor.paddingBottom = paddingBottom
+    descriptor.dataLayout = dataLayout
     return mpsgraph_retain(descriptor)
 }
 
@@ -297,17 +320,17 @@ public func mpsgraph_pooling4d_descriptor_new(
         return nil
     }
     guard kernelSizesLen == 4, stridesLen == 4, dilationRatesLen == 4, paddingValuesLen == 8,
-          let paddingStyle = mpsgraph_padding_style(paddingStyleRaw),
-          let descriptor = MPSGraphPooling4DOpDescriptor.descriptor(
-            withKernelSizes: mpsgraph_shape(kernelSizes, kernelSizesLen),
-            strides: mpsgraph_shape(strides, stridesLen),
-            dilationRates: mpsgraph_shape(dilationRates, dilationRatesLen),
-            paddingValues: mpsgraph_shape(paddingValues, paddingValuesLen),
-            paddingStyle: paddingStyle
-          )
+          let paddingStyle = mpsgraph_padding_style(paddingStyleRaw)
     else {
         return nil
     }
+
+    let descriptor = MPSGraphPooling4DOpDescriptor()
+    descriptor.kernelSizes = mpsgraph_shape(kernelSizes, kernelSizesLen)
+    descriptor.strides = mpsgraph_shape(strides, stridesLen)
+    descriptor.dilationRates = mpsgraph_shape(dilationRates, dilationRatesLen)
+    descriptor.paddingValues = mpsgraph_shape(paddingValues, paddingValuesLen)
+    descriptor.paddingStyle = paddingStyle
     descriptor.ceilMode = ceilMode
     descriptor.includeZeroPadToAverage = includeZeroPadToAverage
     if #available(macOS 12.2, *) {
@@ -333,11 +356,14 @@ public func mpsgraph_sparse_descriptor_new(
         return nil
     }
     guard let storageType = mpsgraph_sparse_storage_type(storageTypeRaw),
-          let dataType = mpsgraph_data_type(dataTypeRaw),
-          let descriptor = MPSGraphCreateSparseOpDescriptor.descriptor(withStorageType: storageType, dataType: dataType)
+          let dataType = mpsgraph_data_type(dataTypeRaw)
     else {
         return nil
     }
+
+    let descriptor = MPSGraphCreateSparseOpDescriptor()
+    descriptor.sparseStorageType = storageType
+    descriptor.dataType = dataType
     return mpsgraph_retain(descriptor)
 }
 
@@ -362,19 +388,19 @@ public func mpsgraph_stencil_descriptor_new(
     guard offsetsLen == 4, stridesLen == 4, dilationRatesLen == 4, explicitPaddingLen == 8,
           let reductionMode = mpsgraph_reduction_mode(reductionModeRaw),
           let boundaryMode = mpsgraph_padding_mode(boundaryModeRaw),
-          let paddingStyle = mpsgraph_padding_style(paddingStyleRaw),
-          let descriptor = MPSGraphStencilOpDescriptor.descriptor(
-            withReductionMode: reductionMode,
-            offsets: mpsgraph_optional_signed_shape(offsets, offsetsLen) ?? [],
-            strides: mpsgraph_shape(strides, stridesLen),
-            dilationRates: mpsgraph_shape(dilationRates, dilationRatesLen),
-            explicitPadding: mpsgraph_shape(explicitPadding, explicitPaddingLen),
-            boundaryMode: boundaryMode,
-            paddingStyle: paddingStyle,
-            paddingConstant: paddingConstant
-          )
+          let paddingStyle = mpsgraph_padding_style(paddingStyleRaw)
     else {
         return nil
     }
+
+    let descriptor = MPSGraphStencilOpDescriptor()
+    descriptor.reductionMode = reductionMode
+    descriptor.offsets = mpsgraph_optional_signed_shape(offsets, offsetsLen) ?? []
+    descriptor.strides = mpsgraph_shape(strides, stridesLen)
+    descriptor.dilationRates = mpsgraph_shape(dilationRates, dilationRatesLen)
+    descriptor.explicitPadding = mpsgraph_shape(explicitPadding, explicitPaddingLen)
+    descriptor.boundaryMode = boundaryMode
+    descriptor.paddingStyle = paddingStyle
+    descriptor.paddingConstant = paddingConstant
     return mpsgraph_retain(descriptor)
 }

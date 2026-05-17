@@ -36,29 +36,31 @@ let values = results[0].read_f32().expect("read result");
 assert_eq!(values, vec![2.0, 0.0, 4.0, 0.0]);
 ```
 
-## v0.2.1 surface
+## v0.2.3 surface
 
 - Core wrappers for `Graph`, `Tensor`, `TensorData`, `Executable`, `Feed`, and `FeedDescription`
-- Metadata and descriptor coverage for `GraphDevice`, `ShapedType`, `Operation`, `CompilationDescriptor`, `ExecutionDescriptor`, `ExecutableExecutionDescriptor`, and `ExecutableSerializationDescriptor`
-- Graph / executable introspection helpers such as `placeholder_tensors`, `feed_tensors`, `target_tensors`, `output_types`, tensor `shape`, tensor `data_type`, and tensor-data `graph_device`
+- Metadata and descriptor coverage for `GraphDevice`, `ShapedType`, `GraphType`, `Object`, `Operation`, `VariableOp`, `CompilationDescriptor`, `ExecutionDescriptor`, `ExecutableExecutionDescriptor`, `ExecutableSerializationDescriptor`, and the audited convolution / FFT / pooling / sparse / stencil descriptor families
+- Graph / executable introspection helpers such as `placeholder_tensors`, `feed_tensors`, `target_tensors`, `output_types`, tensor `shape`, tensor `data_type`, tensor-data `graph_device`, and raw shared-event wait/signal hooks on execution descriptors
 - Graph construction and execution helpers for:
-  - placeholders and constants
-  - matrix multiplication
+  - placeholders, constants, variable tensors, `read_variable`, and `assign_variable`
+  - matrix multiplication, `band_part`, and matrix inverse
   - unary arithmetic (`identity`, exponent/log variants, square/sqrt/reciprocal, abs/neg/sign, rounding, trig/hyperbolic, `isNaN`, `isInfinite`)
   - binary arithmetic (`+`, `-`, `*`, `/`, `divisionNoNaN`, `power`, min/max, comparisons, logical `and`/`or`, `atan2`, `floorModulo`, `select`)
   - activations (`reLU`, `leakyReLU`, `sigmoid`, `softMax`) and gradient helpers for `reLU`, `sigmoid`, and `softMax`
   - shape ops (`reshape`, `transpose`/`permute`, `slice`, `broadcast`, `concat`, `split`, `stack`, `pad`)
-  - reductions (existing sum/max/min/mean plus axis/axes sum/max/min/product)
-  - `topK`
+  - reductions, cumulative sum, `topK`, and `top_k_gradient`
+  - convolution helpers (`convolution2d`, `convolution_transpose2d`, `convolution3d`, `depthwise_convolution2d`, `depthwise_convolution3d`)
+  - pooling helpers (`max_pooling2d`, `max_pooling4d`, `max_pooling4d_return_indices`), normalization, FFT, and `im_to_col`
+  - loss / labeling helpers (`softmax_cross_entropy`, `one_hot`, `non_zero_indices`, `non_maximum_suppression`)
+  - quantization / resize / sample-grid / scatter / sort / sparse / stencil helpers
   - call ops via `Graph::call` plus `CompilationDescriptor::set_callable`
   - control-flow builders for control dependencies, `if`/`then`/`else`, `while`, and `for`
   - gather ops (`gather`, `gatherND`, `gatherAlongAxis`, `gatherAlongAxisTensor`)
   - descriptor-driven random ops (`RandomOpDescriptor`, seeded/stateful random tensors, dropout)
   - recurrent layers (`singleGateRNN`, `LSTM`, `GRU`) plus descriptor wrappers
-  - 2D convolution, max pooling, and normalization helpers
-- Shared constants for `MPSDataType`, `MPSGraphTensorNamedDataLayout`, `MPSGraphPaddingStyle`, graph options, optimization levels, deployment platform values, random distributions, random sampling modes, and RNN activations
+- Shared constants for `MPSDataType`, `MPSGraphTensorNamedDataLayout`, `MPSGraphPaddingStyle`, graph options, optimization levels, deployment platform values, random distributions, random sampling modes, RNN activations, execution stages, reduction / FFT / loss / resize / scatter / sparse / NMS coordinate enums, and pooling return-indices modes
 
-This crate still covers a subset of the full SDK. See [`COVERAGE.md`](COVERAGE.md) for the audited header-by-header status and deferred areas.
+This crate now covers the full 90-symbol audited SDK surface. See [`COVERAGE.md`](COVERAGE.md) for the header-by-header status and the broader SDK families that remain partial.
 
 ## Smoke examples
 
