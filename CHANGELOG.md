@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.2.6] - 2026-05-18
+
+- Widen apple-metal version bound so the 0.x bump dep resolves. No source changes.
+
 ## 0.2.5 - 2026-05-17
 
 - Added missing SAFETY comments on context-pointer casts in callback trampolines (`zero_arg_tensor_array_trampoline`, `while_before_trampoline`, `tensor_array_input_trampoline`, `for_body_trampoline`). These unsafe blocks were previously undocumented, improving transparency of the unsafe FFI boundary logic.
