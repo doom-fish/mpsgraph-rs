@@ -1,12 +1,18 @@
 use core::ffi::{c_char, c_void};
 
 unsafe extern "C" {
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_object_retain`.
     pub fn mpsgraph_object_retain(handle: *mut c_void) -> *mut c_void;
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_operation_as_variable`.
     pub fn mpsgraph_operation_as_variable(handle: *mut c_void) -> *mut c_void;
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_variable_op_shape_len`.
     pub fn mpsgraph_variable_op_shape_len(handle: *mut c_void) -> usize;
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_variable_op_copy_shape`.
     pub fn mpsgraph_variable_op_copy_shape(handle: *mut c_void, out_shape: *mut isize);
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_variable_op_data_type`.
     pub fn mpsgraph_variable_op_data_type(handle: *mut c_void) -> u32;
 
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_convolution3d_descriptor_new`.
     pub fn mpsgraph_convolution3d_descriptor_new(
         stride_in_x: usize,
         stride_in_y: usize,
@@ -25,6 +31,7 @@ unsafe extern "C" {
         data_layout: usize,
         weights_layout: usize,
     ) -> *mut c_void;
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_depthwise_convolution2d_descriptor_new`.
     pub fn mpsgraph_depthwise_convolution2d_descriptor_new(
         stride_in_x: usize,
         stride_in_y: usize,
@@ -38,6 +45,7 @@ unsafe extern "C" {
         data_layout: usize,
         weights_layout: usize,
     ) -> *mut c_void;
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_depthwise_convolution3d_descriptor_new`.
     pub fn mpsgraph_depthwise_convolution3d_descriptor_new(
         strides: *const usize,
         strides_len: usize,
@@ -48,11 +56,13 @@ unsafe extern "C" {
         padding_style: usize,
         channel_dimension_index: isize,
     ) -> *mut c_void;
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_fft_descriptor_new`.
     pub fn mpsgraph_fft_descriptor_new(
         inverse: bool,
         scaling_mode: usize,
         round_to_odd_hermitean: bool,
     ) -> *mut c_void;
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_im_to_col_descriptor_new`.
     pub fn mpsgraph_im_to_col_descriptor_new(
         kernel_width: usize,
         kernel_height: usize,
@@ -66,6 +76,7 @@ unsafe extern "C" {
         padding_bottom: usize,
         data_layout: usize,
     ) -> *mut c_void;
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_pooling4d_descriptor_new`.
     pub fn mpsgraph_pooling4d_descriptor_new(
         kernel_sizes: *const usize,
         kernel_sizes_len: usize,
@@ -81,7 +92,9 @@ unsafe extern "C" {
         return_indices_mode: usize,
         return_indices_data_type: u32,
     ) -> *mut c_void;
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_sparse_descriptor_new`.
     pub fn mpsgraph_sparse_descriptor_new(storage_type: u64, data_type: u32) -> *mut c_void;
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_stencil_descriptor_new`.
     pub fn mpsgraph_stencil_descriptor_new(
         reduction_mode: usize,
         offsets: *const isize,
@@ -97,6 +110,7 @@ unsafe extern "C" {
         padding_constant: f32,
     ) -> *mut c_void;
 
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_graph_convolution3d`.
     pub fn mpsgraph_graph_convolution3d(
         graph_handle: *mut c_void,
         source_tensor: *mut c_void,
@@ -104,6 +118,7 @@ unsafe extern "C" {
         descriptor_handle: *mut c_void,
         name: *const c_char,
     ) -> *mut c_void;
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_graph_convolution_transpose2d`.
     pub fn mpsgraph_graph_convolution_transpose2d(
         graph_handle: *mut c_void,
         source_tensor: *mut c_void,
@@ -113,6 +128,7 @@ unsafe extern "C" {
         descriptor_handle: *mut c_void,
         name: *const c_char,
     ) -> *mut c_void;
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_graph_cumulative_sum`.
     pub fn mpsgraph_graph_cumulative_sum(
         graph_handle: *mut c_void,
         tensor: *mut c_void,
@@ -121,6 +137,7 @@ unsafe extern "C" {
         reverse: bool,
         name: *const c_char,
     ) -> *mut c_void;
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_graph_depthwise_convolution2d`.
     pub fn mpsgraph_graph_depthwise_convolution2d(
         graph_handle: *mut c_void,
         source_tensor: *mut c_void,
@@ -128,6 +145,7 @@ unsafe extern "C" {
         descriptor_handle: *mut c_void,
         name: *const c_char,
     ) -> *mut c_void;
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_graph_depthwise_convolution3d`.
     pub fn mpsgraph_graph_depthwise_convolution3d(
         graph_handle: *mut c_void,
         source_tensor: *mut c_void,
@@ -135,6 +153,7 @@ unsafe extern "C" {
         descriptor_handle: *mut c_void,
         name: *const c_char,
     ) -> *mut c_void;
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_graph_fast_fourier_transform`.
     pub fn mpsgraph_graph_fast_fourier_transform(
         graph_handle: *mut c_void,
         tensor: *mut c_void,
@@ -143,12 +162,14 @@ unsafe extern "C" {
         descriptor_handle: *mut c_void,
         name: *const c_char,
     ) -> *mut c_void;
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_graph_im_to_col`.
     pub fn mpsgraph_graph_im_to_col(
         graph_handle: *mut c_void,
         source_tensor: *mut c_void,
         descriptor_handle: *mut c_void,
         name: *const c_char,
     ) -> *mut c_void;
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_graph_band_part`.
     pub fn mpsgraph_graph_band_part(
         graph_handle: *mut c_void,
         tensor: *mut c_void,
@@ -156,6 +177,7 @@ unsafe extern "C" {
         num_upper: isize,
         name: *const c_char,
     ) -> *mut c_void;
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_graph_softmax_cross_entropy`.
     pub fn mpsgraph_graph_softmax_cross_entropy(
         graph_handle: *mut c_void,
         source_tensor: *mut c_void,
@@ -164,11 +186,13 @@ unsafe extern "C" {
         reduction_type: u64,
         name: *const c_char,
     ) -> *mut c_void;
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_graph_matrix_inverse`.
     pub fn mpsgraph_graph_matrix_inverse(
         graph_handle: *mut c_void,
         tensor: *mut c_void,
         name: *const c_char,
     ) -> *mut c_void;
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_graph_variable_data`.
     pub fn mpsgraph_graph_variable_data(
         graph_handle: *mut c_void,
         bytes: *const c_void,
@@ -178,17 +202,20 @@ unsafe extern "C" {
         data_type: u32,
         name: *const c_char,
     ) -> *mut c_void;
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_graph_read_variable`.
     pub fn mpsgraph_graph_read_variable(
         graph_handle: *mut c_void,
         variable_tensor: *mut c_void,
         name: *const c_char,
     ) -> *mut c_void;
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_graph_assign_variable`.
     pub fn mpsgraph_graph_assign_variable(
         graph_handle: *mut c_void,
         variable_tensor: *mut c_void,
         value_tensor: *mut c_void,
         name: *const c_char,
     ) -> *mut c_void;
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_graph_non_maximum_suppression`.
     pub fn mpsgraph_graph_non_maximum_suppression(
         graph_handle: *mut c_void,
         boxes_tensor: *mut c_void,
@@ -199,11 +226,13 @@ unsafe extern "C" {
         coordinate_mode: usize,
         name: *const c_char,
     ) -> *mut c_void;
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_graph_non_zero_indices`.
     pub fn mpsgraph_graph_non_zero_indices(
         graph_handle: *mut c_void,
         tensor: *mut c_void,
         name: *const c_char,
     ) -> *mut c_void;
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_graph_one_hot`.
     pub fn mpsgraph_graph_one_hot(
         graph_handle: *mut c_void,
         indices_tensor: *mut c_void,
@@ -211,6 +240,7 @@ unsafe extern "C" {
         data_type: u32,
         name: *const c_char,
     ) -> *mut c_void;
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_graph_stochastic_gradient_descent`.
     pub fn mpsgraph_graph_stochastic_gradient_descent(
         graph_handle: *mut c_void,
         learning_rate_tensor: *mut c_void,
@@ -218,18 +248,21 @@ unsafe extern "C" {
         gradient_tensor: *mut c_void,
         name: *const c_char,
     ) -> *mut c_void;
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_graph_max_pooling4d`.
     pub fn mpsgraph_graph_max_pooling4d(
         graph_handle: *mut c_void,
         source_tensor: *mut c_void,
         descriptor_handle: *mut c_void,
         name: *const c_char,
     ) -> *mut c_void;
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_graph_max_pooling4d_return_indices`.
     pub fn mpsgraph_graph_max_pooling4d_return_indices(
         graph_handle: *mut c_void,
         source_tensor: *mut c_void,
         descriptor_handle: *mut c_void,
         name: *const c_char,
     ) -> *mut c_void;
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_graph_quantize`.
     pub fn mpsgraph_graph_quantize(
         graph_handle: *mut c_void,
         tensor: *mut c_void,
@@ -238,6 +271,7 @@ unsafe extern "C" {
         data_type: u32,
         name: *const c_char,
     ) -> *mut c_void;
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_graph_dequantize`.
     pub fn mpsgraph_graph_dequantize(
         graph_handle: *mut c_void,
         tensor: *mut c_void,
@@ -246,6 +280,7 @@ unsafe extern "C" {
         data_type: u32,
         name: *const c_char,
     ) -> *mut c_void;
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_graph_resize`.
     pub fn mpsgraph_graph_resize(
         graph_handle: *mut c_void,
         images_tensor: *mut c_void,
@@ -257,6 +292,7 @@ unsafe extern "C" {
         layout: usize,
         name: *const c_char,
     ) -> *mut c_void;
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_graph_resize_nearest`.
     pub fn mpsgraph_graph_resize_nearest(
         graph_handle: *mut c_void,
         images_tensor: *mut c_void,
@@ -267,6 +303,7 @@ unsafe extern "C" {
         layout: usize,
         name: *const c_char,
     ) -> *mut c_void;
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_graph_sample_grid`.
     pub fn mpsgraph_graph_sample_grid(
         graph_handle: *mut c_void,
         source_tensor: *mut c_void,
@@ -280,6 +317,7 @@ unsafe extern "C" {
         constant_value: f64,
         name: *const c_char,
     ) -> *mut c_void;
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_graph_scatter_nd`.
     pub fn mpsgraph_graph_scatter_nd(
         graph_handle: *mut c_void,
         updates_tensor: *mut c_void,
@@ -290,6 +328,7 @@ unsafe extern "C" {
         mode: isize,
         name: *const c_char,
     ) -> *mut c_void;
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_graph_scatter`.
     pub fn mpsgraph_graph_scatter(
         graph_handle: *mut c_void,
         updates_tensor: *mut c_void,
@@ -300,6 +339,7 @@ unsafe extern "C" {
         mode: isize,
         name: *const c_char,
     ) -> *mut c_void;
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_graph_scatter_along_axis`.
     pub fn mpsgraph_graph_scatter_along_axis(
         graph_handle: *mut c_void,
         axis: isize,
@@ -310,6 +350,7 @@ unsafe extern "C" {
         mode: isize,
         name: *const c_char,
     ) -> *mut c_void;
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_graph_sort`.
     pub fn mpsgraph_graph_sort(
         graph_handle: *mut c_void,
         tensor: *mut c_void,
@@ -317,6 +358,7 @@ unsafe extern "C" {
         descending: bool,
         name: *const c_char,
     ) -> *mut c_void;
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_graph_arg_sort`.
     pub fn mpsgraph_graph_arg_sort(
         graph_handle: *mut c_void,
         tensor: *mut c_void,
@@ -324,6 +366,7 @@ unsafe extern "C" {
         descending: bool,
         name: *const c_char,
     ) -> *mut c_void;
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_graph_sparse_tensor_with_descriptor`.
     pub fn mpsgraph_graph_sparse_tensor_with_descriptor(
         graph_handle: *mut c_void,
         descriptor_handle: *mut c_void,
@@ -333,6 +376,7 @@ unsafe extern "C" {
         shape_len: usize,
         name: *const c_char,
     ) -> *mut c_void;
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_graph_stencil`.
     pub fn mpsgraph_graph_stencil(
         graph_handle: *mut c_void,
         source_tensor: *mut c_void,
@@ -340,6 +384,7 @@ unsafe extern "C" {
         descriptor_handle: *mut c_void,
         name: *const c_char,
     ) -> *mut c_void;
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_graph_topk_gradient`.
     pub fn mpsgraph_graph_topk_gradient(
         graph_handle: *mut c_void,
         gradient_tensor: *mut c_void,
@@ -348,22 +393,26 @@ unsafe extern "C" {
         name: *const c_char,
     ) -> *mut c_void;
 
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_execution_descriptor_wait_for_event`.
     pub fn mpsgraph_execution_descriptor_wait_for_event(
         handle: *mut c_void,
         event_handle: *mut c_void,
         value: u64,
     ) -> bool;
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_execution_descriptor_signal_event`.
     pub fn mpsgraph_execution_descriptor_signal_event(
         handle: *mut c_void,
         event_handle: *mut c_void,
         execution_stage: u64,
         value: u64,
     ) -> bool;
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_executable_execution_descriptor_wait_for_event`.
     pub fn mpsgraph_executable_execution_descriptor_wait_for_event(
         handle: *mut c_void,
         event_handle: *mut c_void,
         value: u64,
     ) -> bool;
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_executable_execution_descriptor_signal_event`.
     pub fn mpsgraph_executable_execution_descriptor_signal_event(
         handle: *mut c_void,
         event_handle: *mut c_void,

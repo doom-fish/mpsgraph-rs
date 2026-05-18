@@ -1,9 +1,14 @@
+/// Mirrors the `MPSGraph` framework counterpart for `Result`.
 pub type Result<T> = core::result::Result<T, Error>;
 
+/// Mirrors the `MPSGraph` framework counterpart for `Error`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Error {
+/// Mirrors the `MPSGraph` framework case `InvalidLength`.
     InvalidLength { expected: usize, actual: usize },
+/// Mirrors the `MPSGraph` framework case `OperationFailed`.
     OperationFailed(&'static str),
+/// Mirrors the `MPSGraph` framework case `UnsupportedDataType`.
     UnsupportedDataType(u32),
 }
 

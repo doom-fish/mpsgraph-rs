@@ -98,17 +98,20 @@ impl TensorData {
         }
     }
 
+/// Mirrors the `MPSGraph` framework constant `fn`.
     #[must_use]
     pub const fn as_ptr(&self) -> *mut c_void {
         self.ptr
     }
 
+/// Calls the `MPSGraph` framework counterpart for `data_type`.
     #[must_use]
     pub fn data_type(&self) -> u32 {
         // SAFETY: `self.ptr` is a valid `MPSGraphTensorData` while `self` is alive.
         unsafe { ffi::mpsgraph_tensor_data_data_type(self.ptr) }
     }
 
+/// Calls the `MPSGraph` framework counterpart for `shape`.
     #[must_use]
     pub fn shape(&self) -> Vec<usize> {
         // SAFETY: `self.ptr` is a valid `MPSGraphTensorData` while `self` is alive.
@@ -121,16 +124,19 @@ impl TensorData {
         shape
     }
 
+/// Calls the `MPSGraph` framework counterpart for `element_count`.
     #[must_use]
     pub fn element_count(&self) -> usize {
         self.shape().iter().product()
     }
 
+/// Calls the `MPSGraph` framework counterpart for `byte_len`.
     pub fn byte_len(&self) -> Result<usize> {
         checked_byte_len(&self.shape(), self.data_type())
             .ok_or_else(|| Error::UnsupportedDataType(self.data_type()))
     }
 
+/// Calls the `MPSGraph` framework counterpart for `read_bytes`.
     pub fn read_bytes(&self) -> Result<Vec<u8>> {
         let byte_len = self.byte_len()?;
         let mut bytes = vec![0_u8; byte_len];
@@ -145,6 +151,7 @@ impl TensorData {
         }
     }
 
+/// Calls the `MPSGraph` framework counterpart for `read_f32`.
     pub fn read_f32(&self) -> Result<Vec<f32>> {
         if self.data_type() != data_type::FLOAT32 {
             return Err(Error::UnsupportedDataType(self.data_type()));

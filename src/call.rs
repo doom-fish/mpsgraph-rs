@@ -28,6 +28,7 @@ fn wrap_tensor_array(box_handle: *mut c_void) -> Option<Vec<Tensor>> {
 }
 
 impl crate::graph::Graph {
+/// Calls the `MPSGraph` framework counterpart for `call`.
     pub fn call(
         &self,
         symbol_name: &str,

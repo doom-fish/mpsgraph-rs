@@ -8,18 +8,31 @@ use std::ffi::CString;
 
 /// Selected `MPSDataType` constants useful for graph inputs and outputs.
 pub mod data_type {
+/// Mirrors the `MPSGraph` framework constant `INVALID`.
     pub const INVALID: u32 = 0;
+/// Mirrors the `MPSGraph` framework constant `FLOAT32`.
     pub const FLOAT32: u32 = 0x1000_0020;
+/// Mirrors the `MPSGraph` framework constant `FLOAT16`.
     pub const FLOAT16: u32 = 0x1000_0010;
+/// Mirrors the `MPSGraph` framework constant `INT8`.
     pub const INT8: u32 = 0x2000_0008;
+/// Mirrors the `MPSGraph` framework constant `INT16`.
     pub const INT16: u32 = 0x2000_0010;
+/// Mirrors the `MPSGraph` framework constant `INT32`.
     pub const INT32: u32 = 0x2000_0020;
+/// Mirrors the `MPSGraph` framework constant `INT64`.
     pub const INT64: u32 = 0x2000_0040;
+/// Mirrors the `MPSGraph` framework constant `UINT8`.
     pub const UINT8: u32 = 0x0000_0008;
+/// Mirrors the `MPSGraph` framework constant `UINT16`.
     pub const UINT16: u32 = 0x0000_0010;
+/// Mirrors the `MPSGraph` framework constant `UINT32`.
     pub const UINT32: u32 = 0x0000_0020;
+/// Mirrors the `MPSGraph` framework constant `UINT64`.
     pub const UINT64: u32 = 0x0000_0040;
+/// Mirrors the `MPSGraph` framework constant `BOOL`.
     pub const BOOL: u32 = 0x8000_0008;
+/// Mirrors the `MPSGraph` framework constant `UNORM8`.
     pub const UNORM8: u32 = 0x4000_0008;
 }
 
@@ -37,41 +50,65 @@ pub const fn data_type_size(data_type: u32) -> Option<usize> {
 
 /// `MPSGraphTensorNamedDataLayout` constants.
 pub mod tensor_named_data_layout {
+/// Mirrors the `MPSGraph` framework constant `NCHW`.
     pub const NCHW: usize = 0;
+/// Mirrors the `MPSGraph` framework constant `NHWC`.
     pub const NHWC: usize = 1;
+/// Mirrors the `MPSGraph` framework constant `OIHW`.
     pub const OIHW: usize = 2;
+/// Mirrors the `MPSGraph` framework constant `HWIO`.
     pub const HWIO: usize = 3;
+/// Mirrors the `MPSGraph` framework constant `CHW`.
     pub const CHW: usize = 4;
+/// Mirrors the `MPSGraph` framework constant `HWC`.
     pub const HWC: usize = 5;
+/// Mirrors the `MPSGraph` framework constant `HW`.
     pub const HW: usize = 6;
+/// Mirrors the `MPSGraph` framework constant `NCDHW`.
     pub const NCDHW: usize = 7;
+/// Mirrors the `MPSGraph` framework constant `NDHWC`.
     pub const NDHWC: usize = 8;
+/// Mirrors the `MPSGraph` framework constant `OIDHW`.
     pub const OIDHW: usize = 9;
+/// Mirrors the `MPSGraph` framework constant `DHWIO`.
     pub const DHWIO: usize = 10;
 }
 
 /// `MPSGraphPaddingStyle` constants.
 pub mod padding_style {
+/// Mirrors the `MPSGraph` framework constant `EXPLICIT`.
     pub const EXPLICIT: usize = 0;
+/// Mirrors the `MPSGraph` framework constant `TF_VALID`.
     pub const TF_VALID: usize = 1;
+/// Mirrors the `MPSGraph` framework constant `TF_SAME`.
     pub const TF_SAME: usize = 2;
+/// Mirrors the `MPSGraph` framework constant `EXPLICIT_OFFSET`.
     pub const EXPLICIT_OFFSET: usize = 3;
+/// Mirrors the `MPSGraph` framework constant `ONNX_SAME_LOWER`.
     pub const ONNX_SAME_LOWER: usize = 4;
 }
 
 /// `MPSGraphPaddingMode` constants.
 pub mod padding_mode {
+/// Mirrors the `MPSGraph` framework constant `CONSTANT`.
     pub const CONSTANT: isize = 0;
+/// Mirrors the `MPSGraph` framework constant `REFLECT`.
     pub const REFLECT: isize = 1;
+/// Mirrors the `MPSGraph` framework constant `SYMMETRIC`.
     pub const SYMMETRIC: isize = 2;
+/// Mirrors the `MPSGraph` framework constant `CLAMP_TO_EDGE`.
     pub const CLAMP_TO_EDGE: isize = 3;
+/// Mirrors the `MPSGraph` framework constant `ZERO`.
     pub const ZERO: isize = 4;
+/// Mirrors the `MPSGraph` framework constant `PERIODIC`.
     pub const PERIODIC: isize = 5;
+/// Mirrors the `MPSGraph` framework constant `ANTI_PERIODIC`.
     pub const ANTI_PERIODIC: isize = 6;
 }
 
 macro_rules! opaque_handle {
     ($name:ident) => {
+/// Mirrors the `MPSGraph` framework counterpart for this type.
         pub struct $name {
             ptr: *mut c_void,
         }
@@ -90,6 +127,7 @@ macro_rules! opaque_handle {
         }
 
         impl $name {
+/// Mirrors the `MPSGraph` framework constant `fn`.
             #[must_use]
             pub const fn as_ptr(&self) -> *mut c_void {
                 self.ptr
@@ -138,6 +176,7 @@ fn wrap_tensor_data_results(
 
 macro_rules! impl_binary_tensor_op {
     ($fn_name:ident, $ffi_name:ident) => {
+/// Calls the `MPSGraph` framework counterpart for this method.
         #[must_use]
         pub fn $fn_name(
             &self,
@@ -162,6 +201,7 @@ macro_rules! impl_binary_tensor_op {
 
 macro_rules! impl_unary_tensor_op {
     ($fn_name:ident, $ffi_name:ident) => {
+/// Calls the `MPSGraph` framework counterpart for this method.
         #[must_use]
         pub fn $fn_name(&self, tensor: &Tensor, name: Option<&str>) -> Option<Tensor> {
             let name = optional_cstring(name);
@@ -174,6 +214,7 @@ macro_rules! impl_unary_tensor_op {
 
 macro_rules! impl_axes_tensor_op {
     ($fn_name:ident, $ffi_name:ident) => {
+/// Calls the `MPSGraph` framework counterpart for this method.
         #[must_use]
         pub fn $fn_name(
             &self,
@@ -200,11 +241,14 @@ macro_rules! impl_axes_tensor_op {
 /// Ordered placeholder feed pairing used for graph execution.
 #[derive(Clone, Copy)]
 pub struct Feed<'a> {
+/// Mirrors the `MPSGraph` framework property for `tensor`.
     pub tensor: &'a Tensor,
+/// Mirrors the `MPSGraph` framework property for `data`.
     pub data: &'a TensorData,
 }
 
 impl<'a> Feed<'a> {
+/// Mirrors the `MPSGraph` framework constant `fn`.
     #[must_use]
     pub const fn new(tensor: &'a Tensor, data: &'a TensorData) -> Self {
         Self { tensor, data }
@@ -214,12 +258,16 @@ impl<'a> Feed<'a> {
 /// Feed metadata used to compile a graph into an executable.
 #[derive(Clone, Copy)]
 pub struct FeedDescription<'a> {
+/// Mirrors the `MPSGraph` framework property for `tensor`.
     pub tensor: &'a Tensor,
+/// Mirrors the `MPSGraph` framework property for `shape`.
     pub shape: &'a [usize],
+/// Mirrors the `MPSGraph` framework property for `data_type`.
     pub data_type: u32,
 }
 
 impl<'a> FeedDescription<'a> {
+/// Mirrors the `MPSGraph` framework constant `fn`.
     #[must_use]
     pub const fn new(tensor: &'a Tensor, shape: &'a [usize], data_type: u32) -> Self {
         Self {
@@ -233,17 +281,29 @@ impl<'a> FeedDescription<'a> {
 /// Plain-Rust configuration for `MPSGraphConvolution2DOpDescriptor`.
 #[derive(Debug, Clone, Copy)]
 pub struct Convolution2DDescriptorInfo {
+/// Mirrors the `MPSGraph` framework property for `stride_in_x`.
     pub stride_in_x: usize,
+/// Mirrors the `MPSGraph` framework property for `stride_in_y`.
     pub stride_in_y: usize,
+/// Mirrors the `MPSGraph` framework property for `dilation_rate_in_x`.
     pub dilation_rate_in_x: usize,
+/// Mirrors the `MPSGraph` framework property for `dilation_rate_in_y`.
     pub dilation_rate_in_y: usize,
+/// Mirrors the `MPSGraph` framework property for `groups`.
     pub groups: usize,
+/// Mirrors the `MPSGraph` framework property for `padding_left`.
     pub padding_left: usize,
+/// Mirrors the `MPSGraph` framework property for `padding_right`.
     pub padding_right: usize,
+/// Mirrors the `MPSGraph` framework property for `padding_top`.
     pub padding_top: usize,
+/// Mirrors the `MPSGraph` framework property for `padding_bottom`.
     pub padding_bottom: usize,
+/// Mirrors the `MPSGraph` framework property for `padding_style`.
     pub padding_style: usize,
+/// Mirrors the `MPSGraph` framework property for `data_layout`.
     pub data_layout: usize,
+/// Mirrors the `MPSGraph` framework property for `weights_layout`.
     pub weights_layout: usize,
 }
 
@@ -268,6 +328,7 @@ impl Default for Convolution2DDescriptorInfo {
 
 opaque_handle!(Convolution2DDescriptor);
 impl Convolution2DDescriptor {
+/// Calls the `MPSGraph` framework counterpart for `new`.
     #[must_use]
     pub fn new(info: Convolution2DDescriptorInfo) -> Option<Self> {
         // SAFETY: All scalar configuration values are POD.
@@ -298,21 +359,34 @@ impl Convolution2DDescriptor {
 /// Plain-Rust configuration for `MPSGraphPooling2DOpDescriptor`.
 #[derive(Debug, Clone, Copy)]
 pub struct Pooling2DDescriptorInfo {
+/// Mirrors the `MPSGraph` framework property for `kernel_width`.
     pub kernel_width: usize,
+/// Mirrors the `MPSGraph` framework property for `kernel_height`.
     pub kernel_height: usize,
+/// Mirrors the `MPSGraph` framework property for `stride_in_x`.
     pub stride_in_x: usize,
+/// Mirrors the `MPSGraph` framework property for `stride_in_y`.
     pub stride_in_y: usize,
+/// Mirrors the `MPSGraph` framework property for `dilation_rate_in_x`.
     pub dilation_rate_in_x: usize,
+/// Mirrors the `MPSGraph` framework property for `dilation_rate_in_y`.
     pub dilation_rate_in_y: usize,
+/// Mirrors the `MPSGraph` framework property for `padding_left`.
     pub padding_left: usize,
+/// Mirrors the `MPSGraph` framework property for `padding_right`.
     pub padding_right: usize,
+/// Mirrors the `MPSGraph` framework property for `padding_top`.
     pub padding_top: usize,
+/// Mirrors the `MPSGraph` framework property for `padding_bottom`.
     pub padding_bottom: usize,
+/// Mirrors the `MPSGraph` framework property for `padding_style`.
     pub padding_style: usize,
+/// Mirrors the `MPSGraph` framework property for `data_layout`.
     pub data_layout: usize,
 }
 
 impl Pooling2DDescriptorInfo {
+/// Mirrors the `MPSGraph` framework constant `fn`.
     #[must_use]
     pub const fn new(kernel_width: usize, kernel_height: usize) -> Self {
         Self {
@@ -334,6 +408,7 @@ impl Pooling2DDescriptorInfo {
 
 opaque_handle!(Pooling2DDescriptor);
 impl Pooling2DDescriptor {
+/// Calls the `MPSGraph` framework counterpart for `new`.
     #[must_use]
     pub fn new(info: Pooling2DDescriptorInfo) -> Option<Self> {
         // SAFETY: All scalar configuration values are POD.
@@ -371,6 +446,7 @@ impl Tensor {
 }
 
 impl Graph {
+/// Calls the `MPSGraph` framework counterpart for `new`.
     #[must_use]
     pub fn new() -> Option<Self> {
         // SAFETY: Pure constructor with no inputs.
@@ -382,6 +458,7 @@ impl Graph {
         }
     }
 
+/// Calls the `MPSGraph` framework counterpart for `placeholder`.
     #[must_use]
     pub fn placeholder(
         &self,
@@ -406,6 +483,7 @@ impl Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `constant_bytes`.
     #[must_use]
     pub fn constant_bytes(&self, data: &[u8], shape: &[usize], data_type: u32) -> Option<Tensor> {
         let expected = checked_byte_len(shape, data_type)?;
@@ -427,6 +505,7 @@ impl Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `constant_f32_slice`.
     #[must_use]
     pub fn constant_f32_slice(&self, values: &[f32], shape: &[usize]) -> Option<Tensor> {
         // SAFETY: `values` is a contiguous slice of `f32` that may be viewed as bytes.
@@ -439,6 +518,7 @@ impl Graph {
         self.constant_bytes(bytes, shape, data_type::FLOAT32)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `constant_scalar`.
     #[must_use]
     pub fn constant_scalar(&self, scalar: f64, data_type: u32) -> Option<Tensor> {
         // SAFETY: Pure constructor over scalar inputs.
@@ -446,6 +526,7 @@ impl Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `constant_scalar_shaped`.
     #[must_use]
     pub fn constant_scalar_shaped(
         &self,
@@ -478,6 +559,7 @@ impl Graph {
     impl_axes_tensor_op!(reduction_minimum, mpsgraph_graph_reduction_minimum);
     impl_axes_tensor_op!(mean, mpsgraph_graph_mean);
 
+/// Calls the `MPSGraph` framework counterpart for `softmax`.
     #[must_use]
     pub fn softmax(&self, tensor: &Tensor, axis: isize, name: Option<&str>) -> Option<Tensor> {
         let name = optional_cstring(name);
@@ -488,6 +570,7 @@ impl Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `reshape`.
     #[must_use]
     pub fn reshape(&self, tensor: &Tensor, shape: &[usize], name: Option<&str>) -> Option<Tensor> {
         let name = optional_cstring(name);
@@ -504,6 +587,7 @@ impl Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `transpose`.
     #[must_use]
     pub fn transpose(
         &self,
@@ -525,6 +609,7 @@ impl Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `slice`.
     #[must_use]
     pub fn slice(
         &self,
@@ -549,6 +634,7 @@ impl Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `broadcast`.
     #[must_use]
     pub fn broadcast(
         &self,
@@ -570,6 +656,7 @@ impl Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `convolution2d`.
     #[must_use]
     pub fn convolution2d(
         &self,
@@ -592,6 +679,7 @@ impl Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `max_pooling2d`.
     #[must_use]
     pub fn max_pooling2d(
         &self,
@@ -612,6 +700,7 @@ impl Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `normalize`.
     #[allow(clippy::too_many_arguments)]
     #[must_use]
     pub fn normalize(
@@ -643,6 +732,7 @@ impl Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `run`.
     pub fn run(&self, feeds: &[Feed<'_>], targets: &[&Tensor]) -> Result<Vec<TensorData>> {
         let feed_tensors = feeds
             .iter()
@@ -677,6 +767,7 @@ impl Graph {
         }
     }
 
+/// Calls the `MPSGraph` framework counterpart for `run_with_command_queue`.
     pub fn run_with_command_queue(
         &self,
         command_queue: &CommandQueue,
@@ -719,6 +810,7 @@ impl Graph {
         }
     }
 
+/// Calls the `MPSGraph` framework counterpart for `compile`.
     #[must_use]
     pub fn compile(
         &self,
@@ -790,16 +882,19 @@ impl Executable {
         Self { ptr, output_count }
     }
 
+/// Mirrors the `MPSGraph` framework constant `fn`.
     #[must_use]
     pub const fn as_ptr(&self) -> *mut c_void {
         self.ptr
     }
 
+/// Mirrors the `MPSGraph` framework constant `fn`.
     #[must_use]
     pub const fn output_count(&self) -> usize {
         self.output_count
     }
 
+/// Calls the `MPSGraph` framework counterpart for `run`.
     pub fn run(
         &self,
         command_queue: &CommandQueue,

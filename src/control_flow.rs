@@ -41,8 +41,11 @@ fn into_owned_tensor_handle(tensor: Tensor) -> *mut c_void {
     ptr
 }
 
+/// Mirrors the `MPSGraph` framework counterpart for `WhileBeforeResult`.
 pub struct WhileBeforeResult {
+/// Mirrors the `MPSGraph` framework property for `predicate`.
     pub predicate: Tensor,
+/// Mirrors the `MPSGraph` framework property for `results`.
     pub results: Vec<Tensor>,
 }
 
@@ -132,6 +135,7 @@ where
 }
 
 impl crate::graph::Graph {
+/// Calls the `MPSGraph` framework counterpart for `control_dependency`.
     pub fn control_dependency<F>(
         &self,
         operations: &[&Operation],
@@ -168,6 +172,7 @@ impl crate::graph::Graph {
         wrap_tensor_array(box_handle)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `if_then`.
     pub fn if_then<Then>(
         &self,
         predicate: &Tensor,
@@ -196,6 +201,7 @@ impl crate::graph::Graph {
         wrap_tensor_array(box_handle)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `if_then_else`.
     pub fn if_then_else<Then, Else>(
         &self,
         predicate: &Tensor,
@@ -229,6 +235,7 @@ impl crate::graph::Graph {
         wrap_tensor_array(box_handle)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `while_loop`.
     pub fn while_loop<Before, After>(
         &self,
         initial_inputs: &[&Tensor],
@@ -272,6 +279,7 @@ impl crate::graph::Graph {
         wrap_tensor_array(box_handle)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `for_loop`.
     #[allow(clippy::too_many_arguments)]
     pub fn for_loop<Body>(
         &self,
@@ -315,6 +323,7 @@ impl crate::graph::Graph {
         wrap_tensor_array(box_handle)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `for_loop_iterations`.
     pub fn for_loop_iterations<Body>(
         &self,
         number_of_iterations: &Tensor,

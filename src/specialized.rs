@@ -62,6 +62,7 @@ fn wrap_tensor_pair(box_handle: *mut c_void) -> Option<(Tensor, Tensor)> {
 
 macro_rules! opaque_handle {
     ($name:ident) => {
+/// Mirrors the `MPSGraph` framework counterpart for this type.
         pub struct $name {
             ptr: *mut c_void,
         }
@@ -76,6 +77,7 @@ macro_rules! opaque_handle {
         }
 
         impl $name {
+/// Mirrors the `MPSGraph` framework constant `fn`.
             #[must_use]
             pub const fn as_ptr(&self) -> *mut c_void {
                 self.ptr
@@ -86,86 +88,131 @@ macro_rules! opaque_handle {
 
 /// `MPSGraphExecutionStage` constants.
 pub mod execution_stage {
+/// Mirrors the `MPSGraph` framework constant `COMPLETED`.
     pub const COMPLETED: u64 = 0;
 }
 
 /// `MPSGraphReductionMode` constants.
 pub mod reduction_mode {
+/// Mirrors the `MPSGraph` framework constant `MIN`.
     pub const MIN: usize = 0;
+/// Mirrors the `MPSGraph` framework constant `MAX`.
     pub const MAX: usize = 1;
+/// Mirrors the `MPSGraph` framework constant `SUM`.
     pub const SUM: usize = 2;
+/// Mirrors the `MPSGraph` framework constant `PRODUCT`.
     pub const PRODUCT: usize = 3;
+/// Mirrors the `MPSGraph` framework constant `ARGUMENT_MIN`.
     pub const ARGUMENT_MIN: usize = 4;
+/// Mirrors the `MPSGraph` framework constant `ARGUMENT_MAX`.
     pub const ARGUMENT_MAX: usize = 5;
 }
 
 /// `MPSGraphPoolingReturnIndicesMode` constants.
 pub mod pooling_return_indices_mode {
+/// Mirrors the `MPSGraph` framework constant `NONE`.
     pub const NONE: usize = 0;
+/// Mirrors the `MPSGraph` framework constant `GLOBAL_FLATTEN_1D`.
     pub const GLOBAL_FLATTEN_1D: usize = 1;
+/// Mirrors the `MPSGraph` framework constant `GLOBAL_FLATTEN_2D`.
     pub const GLOBAL_FLATTEN_2D: usize = 2;
+/// Mirrors the `MPSGraph` framework constant `GLOBAL_FLATTEN_3D`.
     pub const GLOBAL_FLATTEN_3D: usize = 3;
+/// Mirrors the `MPSGraph` framework constant `GLOBAL_FLATTEN_4D`.
     pub const GLOBAL_FLATTEN_4D: usize = 4;
+/// Mirrors the `MPSGraph` framework constant `LOCAL_FLATTEN_1D`.
     pub const LOCAL_FLATTEN_1D: usize = 5;
+/// Mirrors the `MPSGraph` framework constant `LOCAL_FLATTEN_2D`.
     pub const LOCAL_FLATTEN_2D: usize = 6;
+/// Mirrors the `MPSGraph` framework constant `LOCAL_FLATTEN_3D`.
     pub const LOCAL_FLATTEN_3D: usize = 7;
+/// Mirrors the `MPSGraph` framework constant `LOCAL_FLATTEN_4D`.
     pub const LOCAL_FLATTEN_4D: usize = 8;
 }
 
 /// `MPSGraphFFTScalingMode` constants.
 pub mod fft_scaling_mode {
+/// Mirrors the `MPSGraph` framework constant `NONE`.
     pub const NONE: usize = 0;
+/// Mirrors the `MPSGraph` framework constant `SIZE`.
     pub const SIZE: usize = 1;
+/// Mirrors the `MPSGraph` framework constant `UNITARY`.
     pub const UNITARY: usize = 2;
 }
 
 /// `MPSGraphLossReductionType` constants.
 pub mod loss_reduction_type {
+/// Mirrors the `MPSGraph` framework constant `NONE`.
     pub const NONE: u64 = 0;
+/// Mirrors the `MPSGraph` framework constant `AXIS`.
     pub const AXIS: u64 = 0;
+/// Mirrors the `MPSGraph` framework constant `SUM`.
     pub const SUM: u64 = 1;
+/// Mirrors the `MPSGraph` framework constant `MEAN`.
     pub const MEAN: u64 = 2;
 }
 
 /// `MPSGraphNonMaximumSuppressionCoordinateMode` constants.
 pub mod non_maximum_suppression_coordinate_mode {
+/// Mirrors the `MPSGraph` framework constant `CORNERS_HEIGHT_FIRST`.
     pub const CORNERS_HEIGHT_FIRST: usize = 0;
+/// Mirrors the `MPSGraph` framework constant `CORNERS_WIDTH_FIRST`.
     pub const CORNERS_WIDTH_FIRST: usize = 1;
+/// Mirrors the `MPSGraph` framework constant `CENTERS_HEIGHT_FIRST`.
     pub const CENTERS_HEIGHT_FIRST: usize = 2;
+/// Mirrors the `MPSGraph` framework constant `CENTERS_WIDTH_FIRST`.
     pub const CENTERS_WIDTH_FIRST: usize = 3;
 }
 
 /// `MPSGraphResizeMode` constants.
 pub mod resize_mode {
+/// Mirrors the `MPSGraph` framework constant `NEAREST`.
     pub const NEAREST: usize = 0;
+/// Mirrors the `MPSGraph` framework constant `BILINEAR`.
     pub const BILINEAR: usize = 1;
 }
 
 /// `MPSGraphResizeNearestRoundingMode` constants.
 pub mod resize_nearest_rounding_mode {
+/// Mirrors the `MPSGraph` framework constant `ROUND_PREFER_CEIL`.
     pub const ROUND_PREFER_CEIL: usize = 0;
+/// Mirrors the `MPSGraph` framework constant `ROUND_PREFER_FLOOR`.
     pub const ROUND_PREFER_FLOOR: usize = 1;
+/// Mirrors the `MPSGraph` framework constant `CEIL`.
     pub const CEIL: usize = 2;
+/// Mirrors the `MPSGraph` framework constant `FLOOR`.
     pub const FLOOR: usize = 3;
+/// Mirrors the `MPSGraph` framework constant `ROUND_TO_EVEN`.
     pub const ROUND_TO_EVEN: usize = 4;
+/// Mirrors the `MPSGraph` framework constant `ROUND_TO_ODD`.
     pub const ROUND_TO_ODD: usize = 5;
 }
 
 /// `MPSGraphScatterMode` constants.
 pub mod scatter_mode {
+/// Mirrors the `MPSGraph` framework constant `ADD`.
     pub const ADD: isize = 0;
+/// Mirrors the `MPSGraph` framework constant `SUB`.
     pub const SUB: isize = 1;
+/// Mirrors the `MPSGraph` framework constant `MUL`.
     pub const MUL: isize = 2;
+/// Mirrors the `MPSGraph` framework constant `DIV`.
     pub const DIV: isize = 3;
+/// Mirrors the `MPSGraph` framework constant `MIN`.
     pub const MIN: isize = 4;
+/// Mirrors the `MPSGraph` framework constant `MAX`.
     pub const MAX: isize = 5;
+/// Mirrors the `MPSGraph` framework constant `SET`.
     pub const SET: isize = 6;
 }
 
 /// `MPSGraphSparseStorageType` constants.
 pub mod sparse_storage_type {
+/// Mirrors the `MPSGraph` framework constant `COO`.
     pub const COO: u64 = 0;
+/// Mirrors the `MPSGraph` framework constant `CSC`.
     pub const CSC: u64 = 1;
+/// Mirrors the `MPSGraph` framework constant `CSR`.
     pub const CSR: u64 = 2;
 }
 
@@ -186,6 +233,7 @@ impl GraphType {
         Self { ptr }
     }
 
+/// Calls the `MPSGraph` framework counterpart for `as_object`.
     #[must_use]
     pub fn as_object(&self) -> Object {
         Object::retain_from(self.ptr)
@@ -194,6 +242,7 @@ impl GraphType {
 
 opaque_handle!(VariableOp);
 impl VariableOp {
+/// Calls the `MPSGraph` framework counterpart for `shape`.
     #[must_use]
     pub fn shape(&self) -> Vec<isize> {
         // SAFETY: `self.ptr` is a live variable-op handle.
@@ -206,17 +255,20 @@ impl VariableOp {
         shape
     }
 
+/// Calls the `MPSGraph` framework counterpart for `data_type`.
     #[must_use]
     pub fn data_type(&self) -> u32 {
         // SAFETY: `self.ptr` is a live variable-op handle.
         unsafe { ffi::mpsgraph_variable_op_data_type(self.ptr) }
     }
 
+/// Calls the `MPSGraph` framework counterpart for `as_object`.
     #[must_use]
     pub fn as_object(&self) -> Object {
         Object::retain_from(self.ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `as_operation`.
     #[must_use]
     pub fn as_operation(&self) -> Operation {
         // SAFETY: `self.ptr` is a live variable-op handle and retains as an operation wrapper.
@@ -226,6 +278,7 @@ impl VariableOp {
 }
 
 impl ShapedType {
+/// Calls the `MPSGraph` framework counterpart for `as_graph_type`.
     #[must_use]
     pub fn as_graph_type(&self) -> GraphType {
         GraphType::retain_from(self.as_ptr())
@@ -233,6 +286,7 @@ impl ShapedType {
 }
 
 impl Operation {
+/// Calls the `MPSGraph` framework counterpart for `as_variable`.
     #[must_use]
     pub fn as_variable(&self) -> Option<VariableOp> {
         // SAFETY: `self.ptr` is a live operation handle.
@@ -245,23 +299,40 @@ impl Operation {
     }
 }
 
+/// Mirrors the `MPSGraph` framework counterpart for `Convolution3DDescriptorInfo`.
 #[derive(Debug, Clone, Copy)]
 pub struct Convolution3DDescriptorInfo {
+/// Mirrors the `MPSGraph` framework property for `stride_in_x`.
     pub stride_in_x: usize,
+/// Mirrors the `MPSGraph` framework property for `stride_in_y`.
     pub stride_in_y: usize,
+/// Mirrors the `MPSGraph` framework property for `stride_in_z`.
     pub stride_in_z: usize,
+/// Mirrors the `MPSGraph` framework property for `dilation_rate_in_x`.
     pub dilation_rate_in_x: usize,
+/// Mirrors the `MPSGraph` framework property for `dilation_rate_in_y`.
     pub dilation_rate_in_y: usize,
+/// Mirrors the `MPSGraph` framework property for `dilation_rate_in_z`.
     pub dilation_rate_in_z: usize,
+/// Mirrors the `MPSGraph` framework property for `groups`.
     pub groups: usize,
+/// Mirrors the `MPSGraph` framework property for `padding_left`.
     pub padding_left: usize,
+/// Mirrors the `MPSGraph` framework property for `padding_right`.
     pub padding_right: usize,
+/// Mirrors the `MPSGraph` framework property for `padding_top`.
     pub padding_top: usize,
+/// Mirrors the `MPSGraph` framework property for `padding_bottom`.
     pub padding_bottom: usize,
+/// Mirrors the `MPSGraph` framework property for `padding_front`.
     pub padding_front: usize,
+/// Mirrors the `MPSGraph` framework property for `padding_back`.
     pub padding_back: usize,
+/// Mirrors the `MPSGraph` framework property for `padding_style`.
     pub padding_style: usize,
+/// Mirrors the `MPSGraph` framework property for `data_layout`.
     pub data_layout: usize,
+/// Mirrors the `MPSGraph` framework property for `weights_layout`.
     pub weights_layout: usize,
 }
 
@@ -290,6 +361,7 @@ impl Default for Convolution3DDescriptorInfo {
 
 opaque_handle!(Convolution3DDescriptor);
 impl Convolution3DDescriptor {
+/// Calls the `MPSGraph` framework counterpart for `new`.
     #[must_use]
     pub fn new(info: Convolution3DDescriptorInfo) -> Option<Self> {
         // SAFETY: all arguments are POD configuration values.
@@ -321,18 +393,30 @@ impl Convolution3DDescriptor {
     }
 }
 
+/// Mirrors the `MPSGraph` framework counterpart for `DepthwiseConvolution2DDescriptorInfo`.
 #[derive(Debug, Clone, Copy)]
 pub struct DepthwiseConvolution2DDescriptorInfo {
+/// Mirrors the `MPSGraph` framework property for `stride_in_x`.
     pub stride_in_x: usize,
+/// Mirrors the `MPSGraph` framework property for `stride_in_y`.
     pub stride_in_y: usize,
+/// Mirrors the `MPSGraph` framework property for `dilation_rate_in_x`.
     pub dilation_rate_in_x: usize,
+/// Mirrors the `MPSGraph` framework property for `dilation_rate_in_y`.
     pub dilation_rate_in_y: usize,
+/// Mirrors the `MPSGraph` framework property for `padding_left`.
     pub padding_left: usize,
+/// Mirrors the `MPSGraph` framework property for `padding_right`.
     pub padding_right: usize,
+/// Mirrors the `MPSGraph` framework property for `padding_top`.
     pub padding_top: usize,
+/// Mirrors the `MPSGraph` framework property for `padding_bottom`.
     pub padding_bottom: usize,
+/// Mirrors the `MPSGraph` framework property for `padding_style`.
     pub padding_style: usize,
+/// Mirrors the `MPSGraph` framework property for `data_layout`.
     pub data_layout: usize,
+/// Mirrors the `MPSGraph` framework property for `weights_layout`.
     pub weights_layout: usize,
 }
 
@@ -356,6 +440,7 @@ impl Default for DepthwiseConvolution2DDescriptorInfo {
 
 opaque_handle!(DepthwiseConvolution2DDescriptor);
 impl DepthwiseConvolution2DDescriptor {
+/// Calls the `MPSGraph` framework counterpart for `new`.
     #[must_use]
     pub fn new(info: DepthwiseConvolution2DDescriptorInfo) -> Option<Self> {
         // SAFETY: all arguments are POD configuration values.
@@ -382,12 +467,18 @@ impl DepthwiseConvolution2DDescriptor {
     }
 }
 
+/// Mirrors the `MPSGraph` framework counterpart for `DepthwiseConvolution3DDescriptorInfo`.
 #[derive(Debug, Clone, Copy)]
 pub struct DepthwiseConvolution3DDescriptorInfo {
+/// Mirrors the `MPSGraph` framework property for `strides`.
     pub strides: [usize; 3],
+/// Mirrors the `MPSGraph` framework property for `dilation_rates`.
     pub dilation_rates: [usize; 3],
+/// Mirrors the `MPSGraph` framework property for `padding_values`.
     pub padding_values: [usize; 6],
+/// Mirrors the `MPSGraph` framework property for `padding_style`.
     pub padding_style: usize,
+/// Mirrors the `MPSGraph` framework property for `channel_dimension_index`.
     pub channel_dimension_index: isize,
 }
 
@@ -405,6 +496,7 @@ impl Default for DepthwiseConvolution3DDescriptorInfo {
 
 opaque_handle!(DepthwiseConvolution3DDescriptor);
 impl DepthwiseConvolution3DDescriptor {
+/// Calls the `MPSGraph` framework counterpart for `new`.
     #[must_use]
     pub fn new(info: DepthwiseConvolution3DDescriptorInfo) -> Option<Self> {
         // SAFETY: all slices stay alive for the duration of the call.
@@ -428,10 +520,14 @@ impl DepthwiseConvolution3DDescriptor {
     }
 }
 
+/// Mirrors the `MPSGraph` framework counterpart for `FftDescriptorInfo`.
 #[derive(Debug, Clone, Copy)]
 pub struct FftDescriptorInfo {
+/// Mirrors the `MPSGraph` framework property for `inverse`.
     pub inverse: bool,
+/// Mirrors the `MPSGraph` framework property for `scaling_mode`.
     pub scaling_mode: usize,
+/// Mirrors the `MPSGraph` framework property for `round_to_odd_hermitean`.
     pub round_to_odd_hermitean: bool,
 }
 
@@ -447,6 +543,7 @@ impl Default for FftDescriptorInfo {
 
 opaque_handle!(FftDescriptor);
 impl FftDescriptor {
+/// Calls the `MPSGraph` framework counterpart for `new`.
     #[must_use]
     pub fn new(info: FftDescriptorInfo) -> Option<Self> {
         // SAFETY: all arguments are POD configuration values.
@@ -465,18 +562,30 @@ impl FftDescriptor {
     }
 }
 
+/// Mirrors the `MPSGraph` framework counterpart for `ImToColDescriptorInfo`.
 #[derive(Debug, Clone, Copy)]
 pub struct ImToColDescriptorInfo {
+/// Mirrors the `MPSGraph` framework property for `kernel_width`.
     pub kernel_width: usize,
+/// Mirrors the `MPSGraph` framework property for `kernel_height`.
     pub kernel_height: usize,
+/// Mirrors the `MPSGraph` framework property for `stride_in_x`.
     pub stride_in_x: usize,
+/// Mirrors the `MPSGraph` framework property for `stride_in_y`.
     pub stride_in_y: usize,
+/// Mirrors the `MPSGraph` framework property for `dilation_rate_in_x`.
     pub dilation_rate_in_x: usize,
+/// Mirrors the `MPSGraph` framework property for `dilation_rate_in_y`.
     pub dilation_rate_in_y: usize,
+/// Mirrors the `MPSGraph` framework property for `padding_left`.
     pub padding_left: usize,
+/// Mirrors the `MPSGraph` framework property for `padding_right`.
     pub padding_right: usize,
+/// Mirrors the `MPSGraph` framework property for `padding_top`.
     pub padding_top: usize,
+/// Mirrors the `MPSGraph` framework property for `padding_bottom`.
     pub padding_bottom: usize,
+/// Mirrors the `MPSGraph` framework property for `data_layout`.
     pub data_layout: usize,
 }
 
@@ -500,6 +609,7 @@ impl Default for ImToColDescriptorInfo {
 
 opaque_handle!(ImToColDescriptor);
 impl ImToColDescriptor {
+/// Calls the `MPSGraph` framework counterpart for `new`.
     #[must_use]
     pub fn new(info: ImToColDescriptorInfo) -> Option<Self> {
         // SAFETY: all arguments are POD configuration values.
@@ -526,16 +636,26 @@ impl ImToColDescriptor {
     }
 }
 
+/// Mirrors the `MPSGraph` framework counterpart for `Pooling4DDescriptorInfo`.
 #[derive(Debug, Clone, Copy)]
 pub struct Pooling4DDescriptorInfo {
+/// Mirrors the `MPSGraph` framework property for `kernel_sizes`.
     pub kernel_sizes: [usize; 4],
+/// Mirrors the `MPSGraph` framework property for `strides`.
     pub strides: [usize; 4],
+/// Mirrors the `MPSGraph` framework property for `dilation_rates`.
     pub dilation_rates: [usize; 4],
+/// Mirrors the `MPSGraph` framework property for `padding_values`.
     pub padding_values: [usize; 8],
+/// Mirrors the `MPSGraph` framework property for `padding_style`.
     pub padding_style: usize,
+/// Mirrors the `MPSGraph` framework property for `ceil_mode`.
     pub ceil_mode: bool,
+/// Mirrors the `MPSGraph` framework property for `include_zero_pad_to_average`.
     pub include_zero_pad_to_average: bool,
+/// Mirrors the `MPSGraph` framework property for `return_indices_mode`.
     pub return_indices_mode: usize,
+/// Mirrors the `MPSGraph` framework property for `return_indices_data_type`.
     pub return_indices_data_type: u32,
 }
 
@@ -557,6 +677,7 @@ impl Default for Pooling4DDescriptorInfo {
 
 opaque_handle!(Pooling4DDescriptor);
 impl Pooling4DDescriptor {
+/// Calls the `MPSGraph` framework counterpart for `new`.
     #[must_use]
     pub fn new(info: Pooling4DDescriptorInfo) -> Option<Self> {
         // SAFETY: all slices stay alive for the duration of the call.
@@ -587,6 +708,7 @@ impl Pooling4DDescriptor {
 
 opaque_handle!(CreateSparseDescriptor);
 impl CreateSparseDescriptor {
+/// Calls the `MPSGraph` framework counterpart for `new`.
     #[must_use]
     pub fn new(storage_type: u64, data_type: u32) -> Option<Self> {
         // SAFETY: all arguments are POD configuration values.
@@ -599,15 +721,24 @@ impl CreateSparseDescriptor {
     }
 }
 
+/// Mirrors the `MPSGraph` framework counterpart for `StencilDescriptorInfo`.
 #[derive(Debug, Clone, Copy)]
 pub struct StencilDescriptorInfo {
+/// Mirrors the `MPSGraph` framework property for `reduction_mode`.
     pub reduction_mode: usize,
+/// Mirrors the `MPSGraph` framework property for `offsets`.
     pub offsets: [isize; 4],
+/// Mirrors the `MPSGraph` framework property for `strides`.
     pub strides: [usize; 4],
+/// Mirrors the `MPSGraph` framework property for `dilation_rates`.
     pub dilation_rates: [usize; 4],
+/// Mirrors the `MPSGraph` framework property for `explicit_padding`.
     pub explicit_padding: [usize; 8],
+/// Mirrors the `MPSGraph` framework property for `boundary_mode`.
     pub boundary_mode: isize,
+/// Mirrors the `MPSGraph` framework property for `padding_style`.
     pub padding_style: usize,
+/// Mirrors the `MPSGraph` framework property for `padding_constant`.
     pub padding_constant: f32,
 }
 
@@ -628,6 +759,7 @@ impl Default for StencilDescriptorInfo {
 
 opaque_handle!(StencilDescriptor);
 impl StencilDescriptor {
+/// Calls the `MPSGraph` framework counterpart for `new`.
     #[must_use]
     pub fn new(info: StencilDescriptorInfo) -> Option<Self> {
         // SAFETY: all slices stay alive for the duration of the call.
@@ -656,6 +788,7 @@ impl StencilDescriptor {
 }
 
 impl Graph {
+/// Calls the `MPSGraph` framework counterpart for `convolution3d`.
     #[must_use]
     pub fn convolution3d(
         &self,
@@ -678,6 +811,7 @@ impl Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `convolution_transpose2d`.
     #[must_use]
     pub fn convolution_transpose2d(
         &self,
@@ -703,6 +837,7 @@ impl Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `cumulative_sum`.
     #[must_use]
     pub fn cumulative_sum(
         &self,
@@ -727,6 +862,7 @@ impl Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `depthwise_convolution2d`.
     #[must_use]
     pub fn depthwise_convolution2d(
         &self,
@@ -749,6 +885,7 @@ impl Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `depthwise_convolution3d`.
     #[must_use]
     pub fn depthwise_convolution3d(
         &self,
@@ -771,6 +908,7 @@ impl Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `fast_fourier_transform`.
     #[must_use]
     pub fn fast_fourier_transform(
         &self,
@@ -794,6 +932,7 @@ impl Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `im_to_col`.
     #[must_use]
     pub fn im_to_col(
         &self,
@@ -814,6 +953,7 @@ impl Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `band_part`.
     #[must_use]
     pub fn band_part(
         &self,
@@ -836,6 +976,7 @@ impl Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `softmax_cross_entropy`.
     #[must_use]
     pub fn softmax_cross_entropy(
         &self,
@@ -860,6 +1001,7 @@ impl Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `matrix_inverse`.
     #[must_use]
     pub fn matrix_inverse(&self, tensor: &Tensor, name: Option<&str>) -> Option<Tensor> {
         let name = optional_cstring(name);
@@ -870,6 +1012,7 @@ impl Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `variable_bytes`.
     #[must_use]
     pub fn variable_bytes(
         &self,
@@ -899,6 +1042,7 @@ impl Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `variable_f32_slice`.
     #[must_use]
     pub fn variable_f32_slice(
         &self,
@@ -916,6 +1060,7 @@ impl Graph {
         self.variable_bytes(bytes, shape, data_type::FLOAT32, name)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `read_variable`.
     #[must_use]
     pub fn read_variable(&self, variable: &Tensor, name: Option<&str>) -> Option<Tensor> {
         let name = optional_cstring(name);
@@ -926,6 +1071,7 @@ impl Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `assign_variable`.
     #[must_use]
     pub fn assign_variable(
         &self,
@@ -946,6 +1092,7 @@ impl Graph {
         wrap_operation(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `non_maximum_suppression`.
     #[must_use]
     #[allow(clippy::too_many_arguments)]
     pub fn non_maximum_suppression(
@@ -975,6 +1122,7 @@ impl Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `non_zero_indices`.
     #[must_use]
     pub fn non_zero_indices(&self, tensor: &Tensor, name: Option<&str>) -> Option<Tensor> {
         let name = optional_cstring(name);
@@ -985,6 +1133,7 @@ impl Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `one_hot`.
     #[must_use]
     pub fn one_hot(
         &self,
@@ -1007,6 +1156,7 @@ impl Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `stochastic_gradient_descent`.
     #[must_use]
     pub fn stochastic_gradient_descent(
         &self,
@@ -1029,6 +1179,7 @@ impl Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `max_pooling4d`.
     #[must_use]
     pub fn max_pooling4d(
         &self,
@@ -1049,6 +1200,7 @@ impl Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `max_pooling4d_return_indices`.
     #[must_use]
     pub fn max_pooling4d_return_indices(
         &self,
@@ -1069,6 +1221,7 @@ impl Graph {
         wrap_tensor_pair(box_handle)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `quantize`.
     #[must_use]
     pub fn quantize(
         &self,
@@ -1093,6 +1246,7 @@ impl Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `dequantize`.
     #[must_use]
     pub fn dequantize(
         &self,
@@ -1117,6 +1271,7 @@ impl Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `resize`.
     #[must_use]
     #[allow(clippy::too_many_arguments)]
     pub fn resize(
@@ -1147,6 +1302,7 @@ impl Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `resize_nearest`.
     #[must_use]
     #[allow(clippy::too_many_arguments)]
     pub fn resize_nearest(
@@ -1176,6 +1332,7 @@ impl Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `sample_grid`.
     #[must_use]
     #[allow(clippy::too_many_arguments)]
     pub fn sample_grid(
@@ -1211,6 +1368,7 @@ impl Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `scatter_nd`.
     #[must_use]
     pub fn scatter_nd(
         &self,
@@ -1238,6 +1396,7 @@ impl Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `scatter`.
     #[must_use]
     pub fn scatter(
         &self,
@@ -1265,6 +1424,7 @@ impl Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `scatter_along_axis`.
     #[must_use]
     pub fn scatter_along_axis(
         &self,
@@ -1292,6 +1452,7 @@ impl Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `sort`.
     #[must_use]
     pub fn sort(
         &self,
@@ -1314,6 +1475,7 @@ impl Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `arg_sort`.
     #[must_use]
     pub fn arg_sort(
         &self,
@@ -1336,6 +1498,7 @@ impl Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `sparse_tensor_with_descriptor`.
     #[must_use]
     pub fn sparse_tensor_with_descriptor(
         &self,
@@ -1364,6 +1527,7 @@ impl Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `stencil`.
     #[must_use]
     pub fn stencil(
         &self,
@@ -1386,6 +1550,7 @@ impl Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `top_k_gradient`.
     #[must_use]
     pub fn top_k_gradient(
         &self,

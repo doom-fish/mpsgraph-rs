@@ -22,6 +22,7 @@ fn wrap_tensor(ptr: *mut c_void) -> Option<Tensor> {
 }
 
 impl crate::graph::Graph {
+/// Calls the `MPSGraph` framework counterpart for `gather_nd`.
     #[must_use]
     pub fn gather_nd(
         &self,
@@ -44,6 +45,7 @@ impl crate::graph::Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `gather`.
     #[must_use]
     pub fn gather(
         &self,
@@ -68,6 +70,7 @@ impl crate::graph::Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `gather_along_axis`.
     #[must_use]
     pub fn gather_along_axis(
         &self,
@@ -90,6 +93,7 @@ impl crate::graph::Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `gather_along_axis_tensor`.
     #[must_use]
     pub fn gather_along_axis_tensor(
         &self,

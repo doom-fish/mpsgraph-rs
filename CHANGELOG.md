@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.2.7] - 2026-05-18
+
+- Add one-line docs across the public safe and FFI surfaces, raising public-item rustdoc coverage to 99.8%.
+
 ## [0.2.6] - 2026-05-18
 
 - Widen apple-metal version bound so the 0.x bump dep resolves. No source changes.

@@ -35,14 +35,19 @@ fn wrap_tensor_pair(box_handle: *mut c_void) -> Option<(Tensor, Tensor)> {
 
 /// `MPSGraphRandomDistribution` constants.
 pub mod random_distribution {
+/// Mirrors the `MPSGraph` framework constant `UNIFORM`.
     pub const UNIFORM: u64 = 0;
+/// Mirrors the `MPSGraph` framework constant `NORMAL`.
     pub const NORMAL: u64 = 1;
+/// Mirrors the `MPSGraph` framework constant `TRUNCATED_NORMAL`.
     pub const TRUNCATED_NORMAL: u64 = 2;
 }
 
 /// `MPSGraphRandomNormalSamplingMethod` constants.
 pub mod random_normal_sampling_method {
+/// Mirrors the `MPSGraph` framework constant `INV_CDF`.
     pub const INV_CDF: u64 = 0;
+/// Mirrors the `MPSGraph` framework constant `BOX_MULLER`.
     pub const BOX_MULLER: u64 = 1;
 }
 
@@ -65,6 +70,7 @@ impl Drop for RandomOpDescriptor {
 }
 
 impl RandomOpDescriptor {
+/// Calls the `MPSGraph` framework counterpart for `new`.
     #[must_use]
     pub fn new(distribution: u64, data_type: u32) -> Option<Self> {
         // SAFETY: pure constructor with POD arguments.
@@ -81,12 +87,14 @@ impl RandomOpDescriptor {
         self.ptr
     }
 
+/// Calls the `MPSGraph` framework counterpart for `distribution`.
     #[must_use]
     pub fn distribution(&self) -> u64 {
         // SAFETY: `self.ptr` is a live descriptor handle.
         unsafe { ffi::mpsgraph_random_op_descriptor_distribution(self.ptr) }
     }
 
+/// Calls the `MPSGraph` framework counterpart for `set_distribution`.
     pub fn set_distribution(&self, value: u64) -> Result<()> {
         // SAFETY: `self.ptr` is a live descriptor handle.
         let ok = unsafe { ffi::mpsgraph_random_op_descriptor_set_distribution(self.ptr, value) };
@@ -97,12 +105,14 @@ impl RandomOpDescriptor {
         }
     }
 
+/// Calls the `MPSGraph` framework counterpart for `data_type`.
     #[must_use]
     pub fn data_type(&self) -> u32 {
         // SAFETY: `self.ptr` is a live descriptor handle.
         unsafe { ffi::mpsgraph_random_op_descriptor_data_type(self.ptr) }
     }
 
+/// Calls the `MPSGraph` framework counterpart for `set_data_type`.
     pub fn set_data_type(&self, value: u32) -> Result<()> {
         // SAFETY: `self.ptr` is a live descriptor handle.
         let ok = unsafe { ffi::mpsgraph_random_op_descriptor_set_data_type(self.ptr, value) };
@@ -113,12 +123,14 @@ impl RandomOpDescriptor {
         }
     }
 
+/// Calls the `MPSGraph` framework counterpart for `min`.
     #[must_use]
     pub fn min(&self) -> f32 {
         // SAFETY: `self.ptr` is a live descriptor handle.
         unsafe { ffi::mpsgraph_random_op_descriptor_min(self.ptr) }
     }
 
+/// Calls the `MPSGraph` framework counterpart for `set_min`.
     pub fn set_min(&self, value: f32) -> Result<()> {
         // SAFETY: `self.ptr` is a live descriptor handle.
         let ok = unsafe { ffi::mpsgraph_random_op_descriptor_set_min(self.ptr, value) };
@@ -129,12 +141,14 @@ impl RandomOpDescriptor {
         }
     }
 
+/// Calls the `MPSGraph` framework counterpart for `max`.
     #[must_use]
     pub fn max(&self) -> f32 {
         // SAFETY: `self.ptr` is a live descriptor handle.
         unsafe { ffi::mpsgraph_random_op_descriptor_max(self.ptr) }
     }
 
+/// Calls the `MPSGraph` framework counterpart for `set_max`.
     pub fn set_max(&self, value: f32) -> Result<()> {
         // SAFETY: `self.ptr` is a live descriptor handle.
         let ok = unsafe { ffi::mpsgraph_random_op_descriptor_set_max(self.ptr, value) };
@@ -145,12 +159,14 @@ impl RandomOpDescriptor {
         }
     }
 
+/// Calls the `MPSGraph` framework counterpart for `min_integer`.
     #[must_use]
     pub fn min_integer(&self) -> isize {
         // SAFETY: `self.ptr` is a live descriptor handle.
         unsafe { ffi::mpsgraph_random_op_descriptor_min_integer(self.ptr) }
     }
 
+/// Calls the `MPSGraph` framework counterpart for `set_min_integer`.
     pub fn set_min_integer(&self, value: isize) -> Result<()> {
         // SAFETY: `self.ptr` is a live descriptor handle.
         let ok = unsafe { ffi::mpsgraph_random_op_descriptor_set_min_integer(self.ptr, value) };
@@ -161,12 +177,14 @@ impl RandomOpDescriptor {
         }
     }
 
+/// Calls the `MPSGraph` framework counterpart for `max_integer`.
     #[must_use]
     pub fn max_integer(&self) -> isize {
         // SAFETY: `self.ptr` is a live descriptor handle.
         unsafe { ffi::mpsgraph_random_op_descriptor_max_integer(self.ptr) }
     }
 
+/// Calls the `MPSGraph` framework counterpart for `set_max_integer`.
     pub fn set_max_integer(&self, value: isize) -> Result<()> {
         // SAFETY: `self.ptr` is a live descriptor handle.
         let ok = unsafe { ffi::mpsgraph_random_op_descriptor_set_max_integer(self.ptr, value) };
@@ -177,12 +195,14 @@ impl RandomOpDescriptor {
         }
     }
 
+/// Calls the `MPSGraph` framework counterpart for `mean`.
     #[must_use]
     pub fn mean(&self) -> f32 {
         // SAFETY: `self.ptr` is a live descriptor handle.
         unsafe { ffi::mpsgraph_random_op_descriptor_mean(self.ptr) }
     }
 
+/// Calls the `MPSGraph` framework counterpart for `set_mean`.
     pub fn set_mean(&self, value: f32) -> Result<()> {
         // SAFETY: `self.ptr` is a live descriptor handle.
         let ok = unsafe { ffi::mpsgraph_random_op_descriptor_set_mean(self.ptr, value) };
@@ -193,12 +213,14 @@ impl RandomOpDescriptor {
         }
     }
 
+/// Calls the `MPSGraph` framework counterpart for `standard_deviation`.
     #[must_use]
     pub fn standard_deviation(&self) -> f32 {
         // SAFETY: `self.ptr` is a live descriptor handle.
         unsafe { ffi::mpsgraph_random_op_descriptor_standard_deviation(self.ptr) }
     }
 
+/// Calls the `MPSGraph` framework counterpart for `set_standard_deviation`.
     pub fn set_standard_deviation(&self, value: f32) -> Result<()> {
         // SAFETY: `self.ptr` is a live descriptor handle.
         let ok =
@@ -212,12 +234,14 @@ impl RandomOpDescriptor {
         }
     }
 
+/// Calls the `MPSGraph` framework counterpart for `sampling_method`.
     #[must_use]
     pub fn sampling_method(&self) -> u64 {
         // SAFETY: `self.ptr` is a live descriptor handle.
         unsafe { ffi::mpsgraph_random_op_descriptor_sampling_method(self.ptr) }
     }
 
+/// Calls the `MPSGraph` framework counterpart for `set_sampling_method`.
     pub fn set_sampling_method(&self, value: u64) -> Result<()> {
         // SAFETY: `self.ptr` is a live descriptor handle.
         let ok = unsafe { ffi::mpsgraph_random_op_descriptor_set_sampling_method(self.ptr, value) };
@@ -232,6 +256,7 @@ impl RandomOpDescriptor {
 }
 
 impl crate::graph::Graph {
+/// Calls the `MPSGraph` framework counterpart for `random_philox_state_seed`.
     #[must_use]
     pub fn random_philox_state_seed(&self, seed: usize, name: Option<&str>) -> Option<Tensor> {
         let name = optional_cstring(name);
@@ -242,6 +267,7 @@ impl crate::graph::Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `random_philox_state_counter`.
     #[must_use]
     pub fn random_philox_state_counter(
         &self,
@@ -264,6 +290,7 @@ impl crate::graph::Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `random_tensor`.
     #[must_use]
     pub fn random_tensor(
         &self,
@@ -290,6 +317,7 @@ impl crate::graph::Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `random_tensor_shape_tensor`.
     #[must_use]
     pub fn random_tensor_shape_tensor(
         &self,
@@ -310,6 +338,7 @@ impl crate::graph::Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `random_tensor_seed`.
     #[must_use]
     pub fn random_tensor_seed(
         &self,
@@ -338,6 +367,7 @@ impl crate::graph::Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `random_tensor_shape_tensor_seed`.
     #[must_use]
     pub fn random_tensor_shape_tensor_seed(
         &self,
@@ -360,6 +390,7 @@ impl crate::graph::Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `random_tensor_state`.
     #[must_use]
     pub fn random_tensor_state(
         &self,
@@ -388,6 +419,7 @@ impl crate::graph::Graph {
         wrap_tensor_pair(box_handle)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `random_tensor_shape_tensor_state`.
     #[must_use]
     pub fn random_tensor_shape_tensor_state(
         &self,
@@ -410,6 +442,7 @@ impl crate::graph::Graph {
         wrap_tensor_pair(box_handle)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `dropout`.
     #[must_use]
     pub fn dropout(&self, tensor: &Tensor, rate: f64, name: Option<&str>) -> Option<Tensor> {
         let name = optional_cstring(name);
@@ -420,6 +453,7 @@ impl crate::graph::Graph {
         wrap_tensor(ptr)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `dropout_tensor`.
     #[must_use]
     pub fn dropout_tensor(
         &self,

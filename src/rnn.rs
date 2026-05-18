@@ -29,15 +29,21 @@ fn wrap_tensor_array(box_handle: *mut c_void) -> Option<Vec<Tensor>> {
 
 /// `MPSGraphRNNActivation` constants.
 pub mod rnn_activation {
+/// Mirrors the `MPSGraph` framework constant `NONE`.
     pub const NONE: usize = 0;
+/// Mirrors the `MPSGraph` framework constant `RELU`.
     pub const RELU: usize = 1;
+/// Mirrors the `MPSGraph` framework constant `TANH`.
     pub const TANH: usize = 2;
+/// Mirrors the `MPSGraph` framework constant `SIGMOID`.
     pub const SIGMOID: usize = 3;
+/// Mirrors the `MPSGraph` framework constant `HARD_SIGMOID`.
     pub const HARD_SIGMOID: usize = 4;
 }
 
 macro_rules! descriptor_handle {
     ($name:ident) => {
+/// Mirrors the `MPSGraph` framework counterpart for this type.
         pub struct $name {
             ptr: *mut c_void,
         }
@@ -66,12 +72,14 @@ macro_rules! descriptor_handle {
 
 macro_rules! bool_getter_setter {
     ($getter:ident, $setter:ident, $ffi_get:ident, $ffi_set:ident, $msg:literal) => {
+/// Calls the `MPSGraph` framework counterpart for this method.
         #[must_use]
         pub fn $getter(&self) -> bool {
             // SAFETY: `self.ptr` is a live descriptor handle.
             unsafe { ffi::$ffi_get(self.ptr) }
         }
 
+/// Calls the `MPSGraph` framework counterpart for this method.
         pub fn $setter(&self, value: bool) -> Result<()> {
             // SAFETY: `self.ptr` is a live descriptor handle.
             let ok = unsafe { ffi::$ffi_set(self.ptr, value) };
@@ -86,12 +94,14 @@ macro_rules! bool_getter_setter {
 
 macro_rules! activation_getter_setter {
     ($getter:ident, $setter:ident, $ffi_get:ident, $ffi_set:ident, $msg:literal) => {
+/// Calls the `MPSGraph` framework counterpart for this method.
         #[must_use]
         pub fn $getter(&self) -> usize {
             // SAFETY: `self.ptr` is a live descriptor handle.
             unsafe { ffi::$ffi_get(self.ptr) }
         }
 
+/// Calls the `MPSGraph` framework counterpart for this method.
         pub fn $setter(&self, value: usize) -> Result<()> {
             // SAFETY: `self.ptr` is a live descriptor handle.
             let ok = unsafe { ffi::$ffi_set(self.ptr, value) };
@@ -106,6 +116,7 @@ macro_rules! activation_getter_setter {
 
 descriptor_handle!(SingleGateRNNDescriptor);
 impl SingleGateRNNDescriptor {
+/// Calls the `MPSGraph` framework counterpart for `new`.
     #[must_use]
     pub fn new() -> Option<Self> {
         // SAFETY: pure constructor.
@@ -149,6 +160,7 @@ impl SingleGateRNNDescriptor {
 
 descriptor_handle!(LSTMDescriptor);
 impl LSTMDescriptor {
+/// Calls the `MPSGraph` framework counterpart for `new`.
     #[must_use]
     pub fn new() -> Option<Self> {
         // SAFETY: pure constructor.
@@ -234,6 +246,7 @@ impl LSTMDescriptor {
 
 descriptor_handle!(GRUDescriptor);
 impl GRUDescriptor {
+/// Calls the `MPSGraph` framework counterpart for `new`.
     #[must_use]
     pub fn new() -> Option<Self> {
         // SAFETY: pure constructor.
@@ -311,6 +324,7 @@ impl GRUDescriptor {
 }
 
 impl crate::graph::Graph {
+/// Calls the `MPSGraph` framework counterpart for `single_gate_rnn`.
     #[allow(clippy::too_many_arguments)]
     pub fn single_gate_rnn(
         &self,
@@ -341,6 +355,7 @@ impl crate::graph::Graph {
         wrap_tensor_array(box_handle)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `lstm`.
     #[allow(clippy::too_many_arguments)]
     pub fn lstm(
         &self,
@@ -375,6 +390,7 @@ impl crate::graph::Graph {
         wrap_tensor_array(box_handle)
     }
 
+/// Calls the `MPSGraph` framework counterpart for `gru`.
     #[allow(clippy::too_many_arguments)]
     pub fn gru(
         &self,

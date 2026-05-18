@@ -38,37 +38,53 @@ fn copy_string(
 
 /// `MPSGraphOptions` constants.
 pub mod graph_options {
+/// Mirrors the `MPSGraph` framework constant `NONE`.
     pub const NONE: u64 = 0;
+/// Mirrors the `MPSGraph` framework constant `SYNCHRONIZE_RESULTS`.
     pub const SYNCHRONIZE_RESULTS: u64 = 1;
+/// Mirrors the `MPSGraph` framework constant `VERBOSE`.
     pub const VERBOSE: u64 = 2;
+/// Mirrors the `MPSGraph` framework constant `DEFAULT`.
     pub const DEFAULT: u64 = SYNCHRONIZE_RESULTS;
 }
 
 /// `MPSGraphOptimization` constants.
 pub mod optimization {
+/// Mirrors the `MPSGraph` framework constant `LEVEL0`.
     pub const LEVEL0: u64 = 0;
+/// Mirrors the `MPSGraph` framework constant `LEVEL1`.
     pub const LEVEL1: u64 = 1;
 }
 
 /// `MPSGraphOptimizationProfile` constants.
 pub mod optimization_profile {
+/// Mirrors the `MPSGraph` framework constant `PERFORMANCE`.
     pub const PERFORMANCE: u64 = 0;
+/// Mirrors the `MPSGraph` framework constant `POWER_EFFICIENCY`.
     pub const POWER_EFFICIENCY: u64 = 1;
 }
 
 /// `MPSGraphReducedPrecisionFastMath` bit flags.
 pub mod reduced_precision_fast_math {
+/// Mirrors the `MPSGraph` framework constant `NONE`.
     pub const NONE: usize = 0;
+/// Mirrors the `MPSGraph` framework constant `ALLOW_FP16_CONV2D_WINOGRAD_TRANSFORM_INTERMEDIATE`.
     pub const ALLOW_FP16_CONV2D_WINOGRAD_TRANSFORM_INTERMEDIATE: usize = 1 << 1;
+/// Mirrors the `MPSGraph` framework constant `ALLOW_FP16_INTERMEDIATES`.
     pub const ALLOW_FP16_INTERMEDIATES: usize = ALLOW_FP16_CONV2D_WINOGRAD_TRANSFORM_INTERMEDIATE;
+/// Mirrors the `MPSGraph` framework constant `DEFAULT`.
     pub const DEFAULT: usize = NONE;
 }
 
 /// `MPSGraphDeploymentPlatform` constants.
 pub mod deployment_platform {
+/// Mirrors the `MPSGraph` framework constant `MACOS`.
     pub const MACOS: u64 = 0;
+/// Mirrors the `MPSGraph` framework constant `IOS`.
     pub const IOS: u64 = 1;
+/// Mirrors the `MPSGraph` framework constant `TVOS`.
     pub const TVOS: u64 = 2;
+/// Mirrors the `MPSGraph` framework constant `VISIONOS`.
     pub const VISIONOS: u64 = 3;
 }
 
@@ -87,6 +103,7 @@ impl Drop for CompilationDescriptor {
 }
 
 impl CompilationDescriptor {
+/// Calls the `MPSGraph` framework counterpart for `new`.
     #[must_use]
     pub fn new() -> Option<Self> {
         // SAFETY: pure constructor.
@@ -103,6 +120,7 @@ impl CompilationDescriptor {
         self.ptr
     }
 
+/// Calls the `MPSGraph` framework counterpart for `disable_type_inference`.
     pub fn disable_type_inference(&self) -> Result<()> {
         // SAFETY: `self.ptr` is a live descriptor handle.
         let ok = unsafe { ffi::mpsgraph_compilation_descriptor_disable_type_inference(self.ptr) };
@@ -113,12 +131,14 @@ impl CompilationDescriptor {
         }
     }
 
+/// Calls the `MPSGraph` framework counterpart for `optimization_level`.
     #[must_use]
     pub fn optimization_level(&self) -> u64 {
         // SAFETY: `self.ptr` is a live descriptor handle.
         unsafe { ffi::mpsgraph_compilation_descriptor_optimization_level(self.ptr) }
     }
 
+/// Calls the `MPSGraph` framework counterpart for `set_optimization_level`.
     pub fn set_optimization_level(&self, value: u64) -> Result<()> {
         // SAFETY: `self.ptr` is a live descriptor handle.
         let ok =
@@ -130,12 +150,14 @@ impl CompilationDescriptor {
         }
     }
 
+/// Calls the `MPSGraph` framework counterpart for `wait_for_compilation_completion`.
     #[must_use]
     pub fn wait_for_compilation_completion(&self) -> bool {
         // SAFETY: `self.ptr` is a live descriptor handle.
         unsafe { ffi::mpsgraph_compilation_descriptor_wait_for_completion(self.ptr) }
     }
 
+/// Calls the `MPSGraph` framework counterpart for `set_wait_for_compilation_completion`.
     pub fn set_wait_for_compilation_completion(&self, value: bool) -> Result<()> {
         // SAFETY: `self.ptr` is a live descriptor handle.
         let ok = unsafe {
@@ -150,12 +172,14 @@ impl CompilationDescriptor {
         }
     }
 
+/// Calls the `MPSGraph` framework counterpart for `optimization_profile`.
     #[must_use]
     pub fn optimization_profile(&self) -> u64 {
         // SAFETY: `self.ptr` is a live descriptor handle.
         unsafe { ffi::mpsgraph_compilation_descriptor_optimization_profile(self.ptr) }
     }
 
+/// Calls the `MPSGraph` framework counterpart for `set_optimization_profile`.
     pub fn set_optimization_profile(&self, value: u64) -> Result<()> {
         // SAFETY: `self.ptr` is a live descriptor handle.
         let ok = unsafe {
@@ -168,12 +192,14 @@ impl CompilationDescriptor {
         }
     }
 
+/// Calls the `MPSGraph` framework counterpart for `reduced_precision_fast_math`.
     #[must_use]
     pub fn reduced_precision_fast_math(&self) -> usize {
         // SAFETY: `self.ptr` is a live descriptor handle.
         unsafe { ffi::mpsgraph_compilation_descriptor_reduced_precision_fast_math(self.ptr) }
     }
 
+/// Calls the `MPSGraph` framework counterpart for `set_reduced_precision_fast_math`.
     pub fn set_reduced_precision_fast_math(&self, value: usize) -> Result<()> {
         // SAFETY: `self.ptr` is a live descriptor handle.
         let ok = unsafe {
@@ -188,6 +214,7 @@ impl CompilationDescriptor {
         }
     }
 
+/// Calls the `MPSGraph` framework counterpart for `set_callable`.
     pub fn set_callable(&self, symbol_name: &str, executable: Option<&Executable>) -> Result<()> {
         let symbol_name = CString::new(symbol_name)
             .map_err(|_| Error::OperationFailed("call symbol name contained NUL"))?;
@@ -225,6 +252,7 @@ impl Drop for ExecutionDescriptor {
 }
 
 impl ExecutionDescriptor {
+/// Calls the `MPSGraph` framework counterpart for `new`.
     #[must_use]
     pub fn new() -> Option<Self> {
         // SAFETY: pure constructor.
@@ -236,17 +264,20 @@ impl ExecutionDescriptor {
         }
     }
 
+/// Mirrors the `MPSGraph` framework constant `fn`.
     #[must_use]
     pub const fn as_ptr(&self) -> *mut c_void {
         self.ptr
     }
 
+/// Calls the `MPSGraph` framework counterpart for `wait_until_completed`.
     #[must_use]
     pub fn wait_until_completed(&self) -> bool {
         // SAFETY: `self.ptr` is a live descriptor handle.
         unsafe { ffi::mpsgraph_execution_descriptor_wait_until_completed(self.ptr) }
     }
 
+/// Calls the `MPSGraph` framework counterpart for `set_wait_until_completed`.
     pub fn set_wait_until_completed(&self, value: bool) -> Result<()> {
         // SAFETY: `self.ptr` is a live descriptor handle.
         let ok =
@@ -258,6 +289,7 @@ impl ExecutionDescriptor {
         }
     }
 
+/// Calls the `MPSGraph` framework counterpart for `compilation_descriptor`.
     #[must_use]
     pub fn compilation_descriptor(&self) -> Option<CompilationDescriptor> {
         // SAFETY: `self.ptr` is a live descriptor handle.
@@ -269,6 +301,7 @@ impl ExecutionDescriptor {
         }
     }
 
+/// Calls the `MPSGraph` framework counterpart for `set_compilation_descriptor`.
     pub fn set_compilation_descriptor(
         &self,
         descriptor: Option<&CompilationDescriptor>,
@@ -303,6 +336,7 @@ impl Drop for ExecutableExecutionDescriptor {
 }
 
 impl ExecutableExecutionDescriptor {
+/// Calls the `MPSGraph` framework counterpart for `new`.
     #[must_use]
     pub fn new() -> Option<Self> {
         // SAFETY: pure constructor.
@@ -319,12 +353,14 @@ impl ExecutableExecutionDescriptor {
         self.ptr
     }
 
+/// Calls the `MPSGraph` framework counterpart for `wait_until_completed`.
     #[must_use]
     pub fn wait_until_completed(&self) -> bool {
         // SAFETY: `self.ptr` is a live descriptor handle.
         unsafe { ffi::mpsgraph_executable_execution_descriptor_wait_until_completed(self.ptr) }
     }
 
+/// Calls the `MPSGraph` framework counterpart for `set_wait_until_completed`.
     pub fn set_wait_until_completed(&self, value: bool) -> Result<()> {
         // SAFETY: `self.ptr` is a live descriptor handle.
         let ok = unsafe {
@@ -355,6 +391,7 @@ impl Drop for ExecutableSerializationDescriptor {
 }
 
 impl ExecutableSerializationDescriptor {
+/// Calls the `MPSGraph` framework counterpart for `new`.
     #[must_use]
     pub fn new() -> Option<Self> {
         // SAFETY: pure constructor.
@@ -371,12 +408,14 @@ impl ExecutableSerializationDescriptor {
         self.ptr
     }
 
+/// Calls the `MPSGraph` framework counterpart for `append`.
     #[must_use]
     pub fn append(&self) -> bool {
         // SAFETY: `self.ptr` is a live descriptor handle.
         unsafe { ffi::mpsgraph_executable_serialization_descriptor_append(self.ptr) }
     }
 
+/// Calls the `MPSGraph` framework counterpart for `set_append`.
     pub fn set_append(&self, value: bool) -> Result<()> {
         // SAFETY: `self.ptr` is a live descriptor handle.
         let ok = unsafe {
@@ -389,12 +428,14 @@ impl ExecutableSerializationDescriptor {
         }
     }
 
+/// Calls the `MPSGraph` framework counterpart for `deployment_platform`.
     #[must_use]
     pub fn deployment_platform(&self) -> u64 {
         // SAFETY: `self.ptr` is a live descriptor handle.
         unsafe { ffi::mpsgraph_executable_serialization_descriptor_deployment_platform(self.ptr) }
     }
 
+/// Calls the `MPSGraph` framework counterpart for `set_deployment_platform`.
     pub fn set_deployment_platform(&self, value: u64) -> Result<()> {
         // SAFETY: `self.ptr` is a live descriptor handle.
         let ok = unsafe {
@@ -409,6 +450,7 @@ impl ExecutableSerializationDescriptor {
         }
     }
 
+/// Calls the `MPSGraph` framework counterpart for `minimum_deployment_target`.
     pub fn minimum_deployment_target(&self) -> Result<String> {
         copy_string(
             ffi::mpsgraph_executable_serialization_descriptor_minimum_deployment_target_len,
@@ -417,6 +459,7 @@ impl ExecutableSerializationDescriptor {
         )
     }
 
+/// Calls the `MPSGraph` framework counterpart for `set_minimum_deployment_target`.
     pub fn set_minimum_deployment_target(&self, value: &str) -> Result<()> {
         let value = CString::new(value)
             .map_err(|_| Error::OperationFailed("minimum deployment target contained NUL"))?;

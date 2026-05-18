@@ -96,6 +96,7 @@ pub(crate) fn collect_shaped_type_array_box(handle: *mut c_void) -> Vec<ShapedTy
 
 /// `MPSGraphDeviceType` constants.
 pub mod graph_device_type {
+/// Mirrors the `MPSGraph` framework constant `METAL`.
     pub const METAL: u32 = 0;
 }
 
@@ -126,6 +127,7 @@ impl GraphDevice {
         }
     }
 
+/// Mirrors the `MPSGraph` framework constant `fn`.
     #[must_use]
     pub const fn as_ptr(&self) -> *mut c_void {
         self.ptr
@@ -246,6 +248,7 @@ impl Operation {
         Self { ptr }
     }
 
+/// Mirrors the `MPSGraph` framework constant `fn`.
     #[must_use]
     pub const fn as_ptr(&self) -> *mut c_void {
         self.ptr
