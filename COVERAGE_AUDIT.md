@@ -55,7 +55,7 @@ Scope: top-level Objective-C interfaces/categories and enum types from `MetalPer
 | `MPSGraphGRUDescriptor` | interface | `MPSGraphRNNOps.h` | `GRUDescriptor` in `src/rnn.rs`. |
 | `MPSGraph(MPSGraphRNNOps)` | category | `MPSGraphRNNOps.h` | `Graph::{single_gate_rnn,lstm,gru}` in `src/rnn.rs`. |
 | `MPSGraphTensor` | interface | `MPSGraphTensor.h` | `Tensor` in `src/graph.rs` plus `shape` / `data_type` / `operation` accessors in `src/types.rs`. |
-| `MPSGraphTensorData` | interface | `MPSGraphTensorData.h` | `TensorData` in `src/data.rs`. |
+| `MPSGraphTensorData` | interface | `MPSGraphTensorData.h` | `TensorData` in `src/data.rs`, including `from_bytes`, `from_buffer`, and `from_tensor`. |
 | `MPSGraph(MPSGraphTensorShapeOps)` | category | `MPSGraphTensorShapeOps.h` | `Graph::{reshape,transpose,slice,broadcast}` in `src/graph.rs` plus concat/split/stack/pad in `src/ops.rs`. |
 | `MPSGraph(MPSGraphTopKOps)` | category | `MPSGraphTopKOps.h` | `Graph::{top_k,top_k_tensor}` in `src/ops.rs`. |
 

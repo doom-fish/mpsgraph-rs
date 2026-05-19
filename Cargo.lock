@@ -4,15 +4,14 @@ version = 3
 
 [[package]]
 name = "apple-cf"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f18f9f1747c86d067ade130403a7bfc1ba3609de64d4b69ea0ac3296f3052d08"
+version = "0.9.0"
+dependencies = [
+ "doom-fish-utils",
+]
 
 [[package]]
 name = "apple-metal"
-version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a64eafb592a3b7f6d0cd2f2073a4510703d8e9b776ab44e388f6e22d296a9dd1"
+version = "0.8.5"
 dependencies = [
  "apple-cf",
  "libc",
@@ -20,10 +19,14 @@ dependencies = [
 
 [[package]]
 name = "apple-mpsgraph"
-version = "0.2.6"
+version = "0.2.8"
 dependencies = [
  "apple-metal",
 ]
+
+[[package]]
+name = "doom-fish-utils"
+version = "0.2.0"
 
 [[package]]
 name = "libc"

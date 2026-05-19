@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.2.8] - 2026-05-19
+
+### Added
+
+- Added `TensorData::from_tensor` plus a root `MetalTensor` re-export so `MPSGraphTensorData` can alias `id<MTLTensor>` on macOS 16+.
+
 ## [0.2.7] - 2026-05-18
 
 - Add one-line docs across the public safe and FFI surfaces, raising public-item rustdoc coverage to 99.8%.

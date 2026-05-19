@@ -1,7 +1,7 @@
 use crate::error::{Error, Result};
 use crate::ffi;
 use crate::graph::{data_type, data_type_size};
-use apple_metal::{MetalBuffer, MetalDevice};
+use apple_metal::{MetalBuffer, MetalDevice, MetalTensor};
 use core::ffi::c_void;
 use core::ptr;
 
@@ -91,6 +91,17 @@ impl TensorData {
                 data_type,
             )
         };
+        if ptr.is_null() {
+            None
+        } else {
+            Some(Self { ptr })
+        }
+    }
+
+    /// Alias an existing `MTLTensor` as tensor data.
+    #[must_use]
+    pub fn from_tensor(tensor: &MetalTensor) -> Option<Self> {
+        let ptr = unsafe { ffi::mpsgraph_tensor_data_new_with_tensor(tensor.as_ptr()) };
         if ptr.is_null() {
             None
         } else {

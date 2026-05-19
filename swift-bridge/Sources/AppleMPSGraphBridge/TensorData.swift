@@ -44,6 +44,19 @@ public func mpsgraph_tensor_data_new_with_buffer(
     return mpsgraph_retain(tensorData)
 }
 
+@_cdecl("mpsgraph_tensor_data_new_with_tensor")
+public func mpsgraph_tensor_data_new_with_tensor(
+    _ tensorHandle: UnsafeMutableRawPointer?
+) -> UnsafeMutableRawPointer? {
+    guard #available(macOS 16.0, *), let tensorHandle else {
+        return nil
+    }
+
+    let tensor: MTLTensor = mpsgraph_borrow(tensorHandle)
+    let tensorData = MPSGraphTensorData(tensor)
+    return mpsgraph_retain(tensorData)
+}
+
 @_cdecl("mpsgraph_tensor_data_data_type")
 public func mpsgraph_tensor_data_data_type(_ handle: UnsafeMutableRawPointer?) -> UInt32 {
     guard let handle else {

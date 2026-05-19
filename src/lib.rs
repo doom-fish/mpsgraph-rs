@@ -68,5 +68,7 @@ pub use crate::specialized::{
     Pooling4DDescriptor, Pooling4DDescriptorInfo, StencilDescriptor, StencilDescriptorInfo,
     VariableOp,
 };
+/// Re-exports the `Metal` tensor handle used by `TensorData::from_tensor`.
+pub use apple_metal::MetalTensor;
 /// Re-exports the `MPSGraph` framework surface for this item.
 pub use crate::types::{graph_device_type, GraphDevice, Operation, ShapedType};

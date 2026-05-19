@@ -42,6 +42,8 @@ unsafe extern "C" {
         shape_len: usize,
         data_type: u32,
     ) -> *mut c_void;
+/// Calls the `MPSGraph` framework counterpart for `mpsgraph_tensor_data_new_with_tensor`.
+    pub fn mpsgraph_tensor_data_new_with_tensor(tensor_handle: *mut c_void) -> *mut c_void;
 /// Calls the `MPSGraph` framework counterpart for `mpsgraph_tensor_data_data_type`.
     pub fn mpsgraph_tensor_data_data_type(handle: *mut c_void) -> u32;
 /// Calls the `MPSGraph` framework counterpart for `mpsgraph_tensor_data_shape_len`.
