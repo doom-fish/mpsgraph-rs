@@ -13,6 +13,10 @@ The GitHub repository is `mpsgraph-rs`; the published crates.io package is
 cargo add apple-mpsgraph apple-metal
 ```
 
+Requires macOS 11 or later and Rust 1.82. Many newer graph APIs need macOS 12 to 15 and
+return `None` or `Err` on older systems. `TensorData::from_tensor` needs macOS 26, and
+the Float8 and Float4 data types need macOS 27.
+
 ## Quick start
 
 ```rust,no_run
@@ -36,9 +40,11 @@ let values = results[0].read_f32().expect("read result");
 assert_eq!(values, vec![2.0, 0.0, 4.0, 0.0]);
 ```
 
-## v0.2.3 surface
+## Surface
 
 - Core wrappers for `Graph`, `Tensor`, `TensorData`, `Executable`, `Feed`, and `FeedDescription`
+- Tensor data from bytes, `f32` slices, `MTLBuffer`s and (macOS 26) `MTLTensor`s, with byte counts derived from each data type's bit width
+- Synchronous executable runs plus `run_async_with_descriptor`, which returns an `AsyncRun` to wait on
 - Metadata and descriptor coverage for `GraphDevice`, `ShapedType`, `GraphType`, `Object`, `Operation`, `VariableOp`, `CompilationDescriptor`, `ExecutionDescriptor`, `ExecutableExecutionDescriptor`, `ExecutableSerializationDescriptor`, and the audited convolution / FFT / pooling / sparse / stencil descriptor families
 - Graph / executable introspection helpers such as `placeholder_tensors`, `feed_tensors`, `target_tensors`, `output_types`, tensor `shape`, tensor `data_type`, tensor-data `graph_device`, and raw shared-event wait/signal hooks on execution descriptors
 - Graph construction and execution helpers for:
@@ -58,9 +64,28 @@ assert_eq!(values, vec![2.0, 0.0, 4.0, 0.0]);
   - gather ops (`gather`, `gatherND`, `gatherAlongAxis`, `gatherAlongAxisTensor`)
   - descriptor-driven random ops (`RandomOpDescriptor`, seeded/stateful random tensors, dropout)
   - recurrent layers (`singleGateRNN`, `LSTM`, `GRU`) plus descriptor wrappers
-- Shared constants for `MPSDataType`, `MPSGraphTensorNamedDataLayout`, `MPSGraphPaddingStyle`, graph options, optimization levels, deployment platform values, random distributions, random sampling modes, RNN activations, execution stages, reduction / FFT / loss / resize / scatter / sparse / NMS coordinate enums, and pooling return-indices modes
+- Shared constants for `MPSDataType` (including `BFloat16`, the complex types, Int2/Int4/UInt2/UInt4, and the Float8/Float4 types), `MPSGraphTensorNamedDataLayout`, `MPSGraphPaddingStyle`, graph options, optimization levels, deployment platform values, random distributions, random sampling modes, RNN activations, execution stages, reduction / FFT / loss / resize / scatter / sparse / NMS coordinate enums, and pooling return-indices modes
 
-This crate now covers the full 90-symbol audited SDK surface. See [`COVERAGE.md`](COVERAGE.md) for the header-by-header status and the broader SDK families that remain partial.
+Every top-level interface, category and enum in the SDK headers has at least one wrapper,
+but most categories are only partly wrapped. Scaled dot-product attention and the
+tensor-scale, per-axis and lookup-table quantization variants are among the missing
+methods. See [`COVERAGE.md`](COVERAGE.md) for the per-area status.
+
+## Safety notes
+
+- `TensorData::from_bytes` and `from_buffer` check the byte count against the shape and
+  data type with overflow-checked arithmetic, and reads never write past their destination.
+  Sub-byte types pack across the whole array.
+- Shapes are checked for overflow before they reach the Swift bridge. Arithmetic, matrix
+  multiplication, reductions, softmax, reshape, transpose, slice, broadcast and split check
+  their axes and static shapes, and graph and executable runs check feeds and preallocated
+  results, returning `None` or `Err` instead of letting `MPSGraph` abort the process. Other op
+  families, and tensors with dynamic dimensions, are passed to `MPSGraph` unchecked; invalid
+  shapes there still abort the process.
+- An `AsyncRun` hands out its results only from `wait` or `wait_timeout`, after the GPU work
+  has finished; dropping it blocks until then.
+- On the Apple-silicon GPU runtime used for testing, running a graph that contains
+  `non_maximum_suppression` aborts with "Unsupported MPS operation"; building it works.
 
 ## Smoke examples
 

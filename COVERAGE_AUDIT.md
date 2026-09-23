@@ -8,6 +8,8 @@ COVERAGE_PCT: 100.00%
 
 Scope: top-level Objective-C interfaces/categories and enum types from `MetalPerformanceShadersGraph.framework/Headers`, filtered for macOS availability. This framework exposes no top-level `FOUNDATION_EXPORT`, `extern const`, or free C function declarations in the audited headers.
 
+What the numbers measure: a symbol counts as VERIFIED when the crate has at least one safe wrapper for that interface, category or enum. Methods are not counted, and most categories are only partly wrapped: for example `MPSGraph(MPSGraphMatrixMultiplicationOps)` lacks scaled dot-product attention and `HammingDistance`, and `MPSGraph(MPSGraphQuantizationOps)` has 2 of its 10 methods. See `COVERAGE.md` for per-area status. The same 90 symbols appear in the macOS 26.5 SDK used to build 0.3.0.
+
 ## 🟢 VERIFIED
 | Symbol | Kind | Header | Wrapped by |
 | --- | --- | --- | --- |
@@ -38,7 +40,7 @@ Scope: top-level Objective-C interfaces/categories and enum types from `MetalPer
 | `MPSGraph(GatherNDOps)` | category | `MPSGraphGatherOps.h` | `Graph::gather_nd` in `src/gather.rs`. |
 | `MPSGraph(GatherOps)` | category | `MPSGraphGatherOps.h` | `Graph::gather` in `src/gather.rs`. |
 | `MPSGraph(MPSGraphGatherAlongAxisOps)` | category | `MPSGraphGatherOps.h` | `Graph::{gather_along_axis,gather_along_axis_tensor}` in `src/gather.rs`. |
-| `MPSGraph(MPSGraphMatrixMultiplicationOps)` | category | `MPSGraphMatrixMultiplicationOps.h` | `Graph::matrix_multiplication` in `src/graph.rs`. |
+| `MPSGraph(MPSGraphMatrixMultiplicationOps)` | category | `MPSGraphMatrixMultiplicationOps.h` | `Graph::matrix_multiplication` in `src/graph.rs`; scaled dot-product attention and `HammingDistance` are not wrapped. |
 | `MPSGraph(MemoryOps)` | category | `MPSGraphMemoryOps.h` | `Graph::{placeholder,constant_bytes,constant_f32_slice,constant_scalar,constant_scalar_shaped}` in `src/graph.rs`. |
 | `MPSGraph(MPSGraphNormalizationOps)` | category | `MPSGraphNormalizationOps.h` | `Graph::normalize` in `src/graph.rs`. |
 | `MPSGraphOperation` | interface | `MPSGraphOperation.h` | `Operation` in `src/types.rs`; `Tensor::operation`. |
@@ -89,7 +91,7 @@ Scope: top-level Objective-C interfaces/categories and enum types from `MetalPer
 | `MPSGraph(MPSGraphOptimizerOps)` | category | `MPSGraphOptimizerOps.h` | `Graph::stochastic_gradient_descent` in `src/specialized.rs`. |
 | `MPSGraphPoolingReturnIndicesMode` | enum | `MPSGraphPoolingOps.h` | `pooling_return_indices_mode` module plus `Pooling4DDescriptorInfo::return_indices_mode` in `src/specialized.rs`. |
 | `MPSGraphPooling4DOpDescriptor` | interface | `MPSGraphPoolingOps.h` | `Pooling4DDescriptor` / `Pooling4DDescriptorInfo` in `src/specialized.rs`. |
-| `MPSGraph(MPSGraphQuantizationOps)` | category | `MPSGraphQuantizationOps.h` | `Graph::{quantize,dequantize}` in `src/specialized.rs`. |
+| `MPSGraph(MPSGraphQuantizationOps)` | category | `MPSGraphQuantizationOps.h` | `Graph::{quantize,dequantize}` in `src/specialized.rs` (scalar scale and zero point only; 8 of 10 methods are not wrapped). |
 | `MPSGraphResizeMode` | enum | `MPSGraphResizeOps.h` | `resize_mode` module plus `Graph::{resize,sample_grid}` in `src/specialized.rs`. |
 | `MPSGraphResizeNearestRoundingMode` | enum | `MPSGraphResizeOps.h` | `resize_nearest_rounding_mode` module plus `Graph::resize_nearest` in `src/specialized.rs`. |
 | `MPSGraph(MPSGraphResizeOps)` | category | `MPSGraphResizeOps.h` | `Graph::{resize,resize_nearest}` in `src/specialized.rs`. |
@@ -109,7 +111,7 @@ Scope: top-level Objective-C interfaces/categories and enum types from `MetalPer
 ## 🔴 GAPS
 | Symbol | Kind | Header | Notes |
 | --- | --- | --- | --- |
-| _(none)_ | - | - | All 90 audited macOS-visible top-level symbols are wrapped in `v0.2.3`. |
+| _(none)_ | - | - | Every audited top-level symbol has at least one wrapper; method-level gaps are listed in `COVERAGE.md`. |
 
 ## ⏭️ EXEMPT
 | Symbol | Kind | Header | Reason | SDK attribute |

@@ -8,6 +8,8 @@ COVERAGE_PCT: 100.00
 
 Scope: All 90 Objective-C interfaces/categories and enum types from `MetalPerformanceShadersGraph.framework/Headers` (macOS 26.2), enumerated via @interface/@protocol patterns and typedef enum/NS_ENUM/NS_OPTIONS. All macOS-available top-level symbols are wrapped in v0.2.3 and later.
 
+What the numbers measure: a symbol counts as VERIFIED when the crate has at least one safe wrapper for that interface, category or enum. Methods are not counted, and most categories are only partly wrapped: for example `MPSGraph(MPSGraphMatrixMultiplicationOps)` lacks scaled dot-product attention and `HammingDistance`, and `MPSGraph(MPSGraphQuantizationOps)` has 2 of its 10 methods. See `COVERAGE.md` for per-area status. The same 90 symbols appear in the macOS 26.5 SDK used to build 0.3.0.
+
 ## 🟢 VERIFIED
 | Symbol | Kind | Header | Wrapped by |
 | --- | --- | --- | --- |
@@ -78,7 +80,7 @@ Scope: All 90 Objective-C interfaces/categories and enum types from `MetalPerfor
 | `MPSGraph(MPSGraphLinearAlgebraOps)` | category | `MPSGraphLinearAlgebraOps.h` | Graph::band_part |
 | `MPSGraph(MPSGraphLossOps)` | category | `MPSGraphLossOps.h` | Graph::softmax_cross_entropy |
 | `MPSGraph(MPSGraphMatrixInverseOps)` | category | `MPSGraphMatrixInverseOps.h` | Graph::matrix_inverse |
-| `MPSGraph(MPSGraphMatrixMultiplicationOps)` | category | `MPSGraphMatrixMultiplicationOps.h` | Graph::matrix_multiplication |
+| `MPSGraph(MPSGraphMatrixMultiplicationOps)` | category | `MPSGraphMatrixMultiplicationOps.h` | Graph::matrix_multiplication (scaled dot-product attention and HammingDistance are not wrapped) |
 | `MPSGraph(MemoryOps)` | category | `MPSGraphMemoryOps.h` | Graph::{placeholder, constant_*, read_variable, assign_variable} |
 | `MPSGraph(MPSGraphNonMaximumSuppressionOps)` | category | `MPSGraphNonMaximumSuppressionOps.h` | Graph::non_maximum_suppression |
 | `MPSGraph(NonZeroOps)` | category | `MPSGraphNonZeroOps.h` | Graph::non_zero_indices |
@@ -86,7 +88,7 @@ Scope: All 90 Objective-C interfaces/categories and enum types from `MetalPerfor
 | `MPSGraph(MPSGraphOneHotOps)` | category | `MPSGraphOneHotOps.h` | Graph::one_hot |
 | `MPSGraph(MPSGraphOptimizerOps)` | category | `MPSGraphOptimizerOps.h` | Graph::stochastic_gradient_descent |
 | `MPSGraph(MPSGraphPoolingOps)` | category | `MPSGraphPoolingOps.h` | Graph::max_pooling2d |
-| `MPSGraph(MPSGraphQuantizationOps)` | category | `MPSGraphQuantizationOps.h` | Graph::{quantize, dequantize} |
+| `MPSGraph(MPSGraphQuantizationOps)` | category | `MPSGraphQuantizationOps.h` | Graph::{quantize, dequantize} (scalar scale and zero point only; 8 of 10 methods are not wrapped) |
 | `MPSGraph(MPSGraphRandomOps)` | category | `MPSGraphRandomOps.h` | Graph::{random_tensor, dropout, random_philox_state_*} |
 | `MPSGraph(MPSGraphReductionOps)` | category | `MPSGraphReductionOps.h` | Graph::{reduction_sum, reduction_maximum, reduce_axis*} |
 | `MPSGraph(MPSGraphResizeOps)` | category | `MPSGraphResizeOps.h` | Graph::{resize, resize_nearest} |
@@ -105,7 +107,7 @@ Scope: All 90 Objective-C interfaces/categories and enum types from `MetalPerfor
 ## 🔴 GAPS
 | Symbol | Kind | Header | Notes |
 | --- | --- | --- | --- |
-| _(none)_ | - | - | All 90 audited macOS-visible top-level symbols are wrapped in v0.2.3. |
+| _(none)_ | - | - | Every audited top-level symbol has at least one wrapper; method-level gaps are listed in `COVERAGE.md`. |
 
 ## ⏭️ EXEMPT
 | Symbol | Kind | Header | Reason | SDK attribute |
