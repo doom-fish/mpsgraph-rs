@@ -9,8 +9,10 @@ The GitHub repository is `mpsgraph-rs`; the published crates.io package is
 
 ## Install
 
-```bash
-cargo add apple-mpsgraph apple-metal
+```toml
+[dependencies]
+apple-mpsgraph = "0.3"
+apple-metal = "0.10"
 ```
 
 Requires macOS 11 or later and Rust 1.82. Many newer graph APIs need macOS 12 to 15 and
