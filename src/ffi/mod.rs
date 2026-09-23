@@ -530,7 +530,17 @@ unsafe extern "C" {
         result_handles: *const *mut c_void,
         result_count: usize,
         execution_descriptor_handle: *mut c_void,
+        out_completion: *mut *mut c_void,
     ) -> *mut c_void;
+    pub fn mpsgraph_run_completion_wait(handle: *mut c_void, seconds: f64) -> bool;
+    pub fn mpsgraph_run_completion_is_finished(handle: *mut c_void) -> bool;
+    pub fn mpsgraph_run_completion_failed(handle: *mut c_void) -> bool;
+    pub fn mpsgraph_run_completion_error_len(handle: *mut c_void) -> usize;
+    pub fn mpsgraph_run_completion_copy_error(
+        handle: *mut c_void,
+        out_bytes: *mut u8,
+        out_len: usize,
+    ) -> bool;
 /// Calls the `MPSGraph` framework counterpart for `mpsgraph_executable_serialize_package`.
     pub fn mpsgraph_executable_serialize_package(
         handle: *mut c_void,

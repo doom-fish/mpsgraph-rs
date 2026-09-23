@@ -8,6 +8,7 @@ use crate::types::{
 use apple_metal::{CommandQueue, MetalDevice};
 use core::ffi::c_void;
 use core::ptr;
+use core::time::Duration;
 use std::ffi::CString;
 
 fn release_handle(ptr: &mut *mut c_void) {
@@ -712,27 +713,23 @@ impl Executable {
         &self,
         command_queue: &CommandQueue,
         inputs: &[&TensorData],
-        results: Option<&[&TensorData]>,
+        results: Option<Vec<TensorData>>,
         descriptor: Option<&ExecutableExecutionDescriptor>,
-    ) -> Result<Vec<TensorData>> {
+    ) -> Result<AsyncRun> {
         self.check_inputs(inputs)?;
-        if let Some(results) = results {
-            self.check_results(results)?;
+        let results = results.unwrap_or_default();
+        let result_refs = results.iter().collect::<Vec<_>>();
+        if !result_refs.is_empty() {
+            self.check_results(&result_refs)?;
         }
         let input_handles = inputs
             .iter()
             .map(|value| value.as_ptr())
             .collect::<Vec<_>>();
-        let result_handles = results
-            .map(|values| {
-                values
-                    .iter()
-                    .map(|value| value.as_ptr())
-                    .collect::<Vec<_>>()
-            })
-            .unwrap_or_default();
+        let result_handles = results.iter().map(TensorData::as_ptr).collect::<Vec<_>>();
         let descriptor_ptr =
             descriptor.map_or(ptr::null_mut(), ExecutableExecutionDescriptor::as_ptr);
+        let mut completion = ptr::null_mut();
 
         // SAFETY: all pointer arrays stay alive for the duration of the call.
         let box_handle = unsafe {
@@ -744,15 +741,20 @@ impl Executable {
                 result_handles.as_ptr(),
                 result_handles.len(),
                 descriptor_ptr,
+                &raw mut completion,
             )
         };
-        if box_handle.is_null() {
-            Err(Error::OperationFailed(
+        if box_handle.is_null() || completion.is_null() {
+            let mut abandoned = completion;
+            release_handle(&mut abandoned);
+            return Err(Error::OperationFailed(
                 "failed to run executable asynchronously",
-            ))
-        } else {
-            Ok(collect_tensor_data_array_box(box_handle))
+            ));
         }
+        Ok(AsyncRun {
+            results: collect_tensor_data_array_box(box_handle),
+            completion,
+        })
     }
 
     /// Serialize the executable to an `.mpsgraphpackage` path.
@@ -795,5 +797,57 @@ impl Executable {
             collect_owned_tensors(box_handle).len()
         };
         Ok(Self::from_raw(ptr, output_count))
+    }
+}
+
+#[must_use = "dropping an AsyncRun blocks until the GPU work finishes"]
+pub struct AsyncRun {
+    results: Vec<TensorData>,
+    completion: *mut c_void,
+}
+
+unsafe impl Send for AsyncRun {}
+
+impl AsyncRun {
+    #[must_use]
+    pub fn is_complete(&self) -> bool {
+        unsafe { ffi::mpsgraph_run_completion_is_finished(self.completion) }
+    }
+
+    pub fn wait(self) -> Result<Vec<TensorData>> {
+        unsafe { ffi::mpsgraph_run_completion_wait(self.completion, -1.0) };
+        self.finish()
+    }
+
+    pub fn wait_timeout(
+        self,
+        timeout: Duration,
+    ) -> core::result::Result<Result<Vec<TensorData>>, Self> {
+        if unsafe { ffi::mpsgraph_run_completion_wait(self.completion, timeout.as_secs_f64()) } {
+            Ok(self.finish())
+        } else {
+            Err(self)
+        }
+    }
+
+    fn finish(mut self) -> Result<Vec<TensorData>> {
+        if unsafe { ffi::mpsgraph_run_completion_failed(self.completion) } {
+            let message = copy_string(
+                ffi::mpsgraph_run_completion_error_len,
+                ffi::mpsgraph_run_completion_copy_error,
+                self.completion,
+            )?;
+            return Err(Error::ExecutionFailed(message));
+        }
+        Ok(core::mem::take(&mut self.results))
+    }
+}
+
+impl Drop for AsyncRun {
+    fn drop(&mut self) {
+        if !self.completion.is_null() {
+            unsafe { ffi::mpsgraph_run_completion_wait(self.completion, -1.0) };
+            release_handle(&mut self.completion);
+        }
     }
 }

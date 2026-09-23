@@ -623,13 +623,14 @@ public func mpsgraph_executable_run_async_with_descriptor(
     _ inputCount: Int,
     _ resultHandles: UnsafePointer<UnsafeMutableRawPointer?>?,
     _ resultCount: Int,
-    _ executionDescriptorHandle: UnsafeMutableRawPointer?
+    _ executionDescriptorHandle: UnsafeMutableRawPointer?,
+    _ outCompletion: UnsafeMutablePointer<UnsafeMutableRawPointer?>?
 ) -> UnsafeMutableRawPointer? {
     guard #available(macOS 12.0, *) else {
             return nil
         }
 
-    guard let executableHandle, let commandQueueHandle, let inputs = mpsgraph_tensor_data_array(inputHandles, count: inputCount) else {
+    guard let executableHandle, let commandQueueHandle, let outCompletion, let inputs = mpsgraph_tensor_data_array(inputHandles, count: inputCount) else {
         return nil
     }
     let executable: MPSGraphExecutable = mpsgraph_borrow(executableHandle)
@@ -641,12 +642,126 @@ public func mpsgraph_executable_run_async_with_descriptor(
         }
         results = provided
     }
-    let executionDescriptor = executionDescriptorHandle.map { ptr in
-        let descriptor: MPSGraphExecutableExecutionDescriptor = mpsgraph_borrow(ptr)
-        return descriptor
+    let executionDescriptor: MPSGraphExecutableExecutionDescriptor
+    if let executionDescriptorHandle {
+        let callerDescriptor: MPSGraphExecutableExecutionDescriptor = mpsgraph_borrow(executionDescriptorHandle)
+        guard let copied = callerDescriptor.copy() as? MPSGraphExecutableExecutionDescriptor else {
+            return nil
+        }
+        executionDescriptor = copied
+    } else {
+        executionDescriptor = MPSGraphExecutableExecutionDescriptor()
+    }
+    let completion = MPSGraphRunCompletion()
+    executionDescriptor.completionHandler = { _, error in
+        completion.finish(error)
     }
     let output = executable.runAsync(with: commandQueue, inputs: inputs, results: results, executionDescriptor: executionDescriptor)
+    outCompletion.pointee = mpsgraph_retain(completion)
     return mpsgraph_tensor_data_array_box(output)
+}
+
+final class MPSGraphRunCompletion {
+    private let condition = NSCondition()
+    private var finished = false
+    private var failure: [UInt8]?
+
+    func finish(_ error: Error?) {
+        condition.lock()
+        finished = true
+        failure = error.map { Array(String(describing: $0).utf8) }
+        condition.broadcast()
+        condition.unlock()
+    }
+
+    func wait(seconds: Double) -> Bool {
+        condition.lock()
+        defer { condition.unlock() }
+        guard seconds >= 0 else {
+            while !finished {
+                condition.wait()
+            }
+            return true
+        }
+        let deadline = Date(timeIntervalSinceNow: seconds)
+        while !finished {
+            if !condition.wait(until: deadline) {
+                return finished
+            }
+        }
+        return true
+    }
+
+    var isFinished: Bool {
+        condition.lock()
+        defer { condition.unlock() }
+        return finished
+    }
+
+    var failureBytes: [UInt8]? {
+        condition.lock()
+        defer { condition.unlock() }
+        return failure
+    }
+}
+
+@_cdecl("mpsgraph_run_completion_wait")
+public func mpsgraph_run_completion_wait(_ handle: UnsafeMutableRawPointer?, _ seconds: Double) -> Bool {
+    guard let handle else {
+        return false
+    }
+    let completion: MPSGraphRunCompletion = mpsgraph_borrow(handle)
+    return completion.wait(seconds: seconds)
+}
+
+@_cdecl("mpsgraph_run_completion_is_finished")
+public func mpsgraph_run_completion_is_finished(_ handle: UnsafeMutableRawPointer?) -> Bool {
+    guard let handle else {
+        return false
+    }
+    let completion: MPSGraphRunCompletion = mpsgraph_borrow(handle)
+    return completion.isFinished
+}
+
+@_cdecl("mpsgraph_run_completion_failed")
+public func mpsgraph_run_completion_failed(_ handle: UnsafeMutableRawPointer?) -> Bool {
+    guard let handle else {
+        return true
+    }
+    let completion: MPSGraphRunCompletion = mpsgraph_borrow(handle)
+    return completion.failureBytes != nil
+}
+
+@_cdecl("mpsgraph_run_completion_error_len")
+public func mpsgraph_run_completion_error_len(_ handle: UnsafeMutableRawPointer?) -> Int {
+    guard let handle else {
+        return 0
+    }
+    let completion: MPSGraphRunCompletion = mpsgraph_borrow(handle)
+    return completion.failureBytes?.count ?? 0
+}
+
+@_cdecl("mpsgraph_run_completion_copy_error")
+public func mpsgraph_run_completion_copy_error(
+    _ handle: UnsafeMutableRawPointer?,
+    _ outBytes: UnsafeMutablePointer<UInt8>?,
+    _ outLen: Int
+) -> Bool {
+    guard let handle else {
+        return false
+    }
+    let completion: MPSGraphRunCompletion = mpsgraph_borrow(handle)
+    let bytes = completion.failureBytes ?? []
+    guard bytes.count == outLen else {
+        return false
+    }
+    guard let outBytes else {
+        return outLen == 0
+    }
+    for (index, value) in bytes.enumerated() {
+        outBytes[index] = value
+    }
+    return true
 }
 
 @_cdecl("mpsgraph_executable_serialize_package")

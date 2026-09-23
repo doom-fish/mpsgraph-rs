@@ -41,7 +41,7 @@ pub use crate::error::{Error, Result};
 /// Re-exports the `MPSGraph` framework surface for this item.
 pub use crate::execution::{
     deployment_platform, graph_options, optimization, optimization_profile,
-    reduced_precision_fast_math, CompilationDescriptor, ExecutableExecutionDescriptor,
+    reduced_precision_fast_math, AsyncRun, CompilationDescriptor, ExecutableExecutionDescriptor,
     ExecutableSerializationDescriptor, ExecutionDescriptor,
 };
 /// Re-exports the `MPSGraph` framework surface for this item.
