@@ -34,16 +34,43 @@ pub mod data_type {
     pub const BOOL: u32 = 0x8000_0008;
 /// Mirrors the `MPSGraph` framework constant `UNORM8`.
     pub const UNORM8: u32 = 0x4000_0008;
+    pub const BFLOAT16: u32 = 0x9000_0010;
+    pub const COMPLEX_FLOAT16: u32 = 0x1100_0020;
+    pub const COMPLEX_FLOAT32: u32 = 0x1100_0040;
+    pub const COMPLEX_BFLOAT16: u32 = 0x9100_0020;
+    pub const INT2: u32 = 0x2000_0002;
+    pub const INT4: u32 = 0x2000_0004;
+    pub const UINT2: u32 = 0x0000_0002;
+    pub const UINT4: u32 = 0x0000_0004;
+    pub const FLOAT8_E4M3: u32 = 0x1043_0008;
+    pub const FLOAT8_E5M2: u32 = 0x1052_0008;
+    pub const FLOAT8_E8M0: u32 = 0x1080_0008;
+    pub const FLOAT4_E2M1: u32 = 0x1021_0004;
+}
+
+#[must_use]
+pub const fn data_type_bits(data_type: u32) -> Option<usize> {
+    use data_type::{
+        BFLOAT16, BOOL, COMPLEX_BFLOAT16, COMPLEX_FLOAT16, COMPLEX_FLOAT32, FLOAT16, FLOAT32,
+        FLOAT4_E2M1, FLOAT8_E4M3, FLOAT8_E5M2, FLOAT8_E8M0, INT16, INT2, INT32, INT4, INT64, INT8,
+        UINT16, UINT2, UINT32, UINT4, UINT64, UINT8, UNORM8,
+    };
+    match data_type {
+        INT2 | UINT2 => Some(2),
+        INT4 | UINT4 | FLOAT4_E2M1 => Some(4),
+        INT8 | UINT8 | BOOL | UNORM8 | FLOAT8_E4M3 | FLOAT8_E5M2 | FLOAT8_E8M0 => Some(8),
+        FLOAT16 | BFLOAT16 | INT16 | UINT16 => Some(16),
+        FLOAT32 | INT32 | UINT32 | COMPLEX_FLOAT16 | COMPLEX_BFLOAT16 => Some(32),
+        INT64 | UINT64 | COMPLEX_FLOAT32 => Some(64),
+        _ => None,
+    }
 }
 
 /// Return the byte width of a supported `MPSDataType`.
 #[must_use]
 pub const fn data_type_size(data_type: u32) -> Option<usize> {
-    match data_type {
-        data_type::FLOAT16 | data_type::INT16 | data_type::UINT16 => Some(2),
-        data_type::FLOAT32 | data_type::INT32 | data_type::UINT32 => Some(4),
-        data_type::INT64 | data_type::UINT64 => Some(8),
-        data_type::INT8 | data_type::UINT8 | data_type::BOOL | data_type::UNORM8 => Some(1),
+    match data_type_bits(data_type) {
+        Some(bits) if bits % 8 == 0 => Some(bits / 8),
         _ => None,
     }
 }
@@ -136,11 +163,13 @@ macro_rules! opaque_handle {
     };
 }
 
-fn checked_byte_len(shape: &[usize], data_type: u32) -> Option<usize> {
-    let element_size = data_type_size(data_type)?;
+pub(crate) fn checked_byte_len(shape: &[usize], data_type: u32) -> Option<usize> {
+    let bits = data_type_bits(data_type)?;
     shape
         .iter()
-        .try_fold(element_size, |acc, dimension| acc.checked_mul(*dimension))
+        .try_fold(bits, |acc, dimension| acc.checked_mul(*dimension))
+        .map(|bits| bits.div_ceil(8))
+        .filter(|bytes| isize::try_from(*bytes).is_ok())
 }
 
 fn optional_cstring(name: Option<&str>) -> Option<CString> {

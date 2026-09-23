@@ -46,6 +46,9 @@ public func mpsgraph_graph_split_sizes(
     _ axis: Int,
     _ name: UnsafePointer<CChar>?
 ) -> UnsafeMutableRawPointer? {
+    guard let splitSizesValues = mpsgraph_shape(splitSizes, splitCount) else {
+        return nil
+    }
     guard #available(macOS 12.3, *) else {
         return nil
     }
@@ -54,7 +57,7 @@ public func mpsgraph_graph_split_sizes(
     }
     let graph: MPSGraph = mpsgraph_borrow(graphHandle)
     let tensor: MPSGraphTensor = mpsgraph_borrow(tensorHandle)
-    let result = graph.split(tensor, splitSizes: mpsgraph_shape(splitSizes, splitCount), axis: axis, name: mpsgraph_optional_name(name))
+    let result = graph.split(tensor, splitSizes: splitSizesValues, axis: axis, name: mpsgraph_optional_name(name))
     return mpsgraph_tensor_array_box(result)
 }
 

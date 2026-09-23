@@ -314,6 +314,9 @@ public func mpsgraph_graph_random_tensor(
     _ descriptorHandle: UnsafeMutableRawPointer?,
     _ name: UnsafePointer<CChar>?
 ) -> UnsafeMutableRawPointer? {
+    guard let shapeValues = mpsgraph_shape(shape, shapeLen) else {
+        return nil
+    }
     guard #available(macOS 12.3, *) else {
         return nil
     }
@@ -322,7 +325,7 @@ public func mpsgraph_graph_random_tensor(
     }
     let graph: MPSGraph = mpsgraph_borrow(graphHandle)
     let descriptor: MPSGraphRandomOpDescriptor = mpsgraph_borrow(descriptorHandle)
-    return mpsgraph_retain(graph.randomTensor(withShape: mpsgraph_shape(shape, shapeLen), descriptor: descriptor, name: mpsgraph_optional_name(name)))
+    return mpsgraph_retain(graph.randomTensor(withShape: shapeValues, descriptor: descriptor, name: mpsgraph_optional_name(name)))
 }
 
 @_cdecl("mpsgraph_graph_random_tensor_shape_tensor")
@@ -353,6 +356,9 @@ public func mpsgraph_graph_random_tensor_seed(
     _ seed: Int,
     _ name: UnsafePointer<CChar>?
 ) -> UnsafeMutableRawPointer? {
+    guard let shapeValues = mpsgraph_shape(shape, shapeLen) else {
+        return nil
+    }
     guard #available(macOS 12.3, *) else {
         return nil
     }
@@ -363,7 +369,7 @@ public func mpsgraph_graph_random_tensor_seed(
     let descriptor: MPSGraphRandomOpDescriptor = mpsgraph_borrow(descriptorHandle)
     return mpsgraph_retain(
         graph.randomTensor(
-            withShape: mpsgraph_shape(shape, shapeLen),
+            withShape: shapeValues,
             descriptor: descriptor,
             seed: seed,
             name: mpsgraph_optional_name(name)
@@ -407,6 +413,9 @@ public func mpsgraph_graph_random_tensor_state(
     _ stateHandle: UnsafeMutableRawPointer?,
     _ name: UnsafePointer<CChar>?
 ) -> UnsafeMutableRawPointer? {
+    guard let shapeValues = mpsgraph_shape(shape, shapeLen) else {
+        return nil
+    }
     guard #available(macOS 12.3, *) else {
         return nil
     }
@@ -417,7 +426,7 @@ public func mpsgraph_graph_random_tensor_state(
     let descriptor: MPSGraphRandomOpDescriptor = mpsgraph_borrow(descriptorHandle)
     let state: MPSGraphTensor = mpsgraph_borrow(stateHandle)
     let result = graph.randomTensor(
-        withShape: mpsgraph_shape(shape, shapeLen),
+        withShape: shapeValues,
         descriptor: descriptor,
         stateTensor: state,
         name: mpsgraph_optional_name(name)

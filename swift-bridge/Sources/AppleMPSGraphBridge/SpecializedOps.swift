@@ -50,6 +50,9 @@ public func mpsgraph_graph_convolution_transpose2d(
     _ descriptorHandle: UnsafeMutableRawPointer?,
     _ name: UnsafePointer<CChar>?
 ) -> UnsafeMutableRawPointer? {
+    guard let outputShapeValues = mpsgraph_shape(outputShape, outputShapeLen) else {
+        return nil
+    }
     guard let graphHandle, let sourceTensorHandle, let weightsTensorHandle, let descriptorHandle else {
         return nil
     }
@@ -61,7 +64,7 @@ public func mpsgraph_graph_convolution_transpose2d(
         graph.convolutionTranspose2D(
             sourceTensor,
             weights: weightsTensor,
-            outputShape: mpsgraph_shape(outputShape, outputShapeLen),
+            outputShape: outputShapeValues,
             descriptor: descriptor,
             name: mpsgraph_optional_name(name)
         )
@@ -142,6 +145,9 @@ public func mpsgraph_graph_fast_fourier_transform(
     _ descriptorHandle: UnsafeMutableRawPointer?,
     _ name: UnsafePointer<CChar>?
 ) -> UnsafeMutableRawPointer? {
+    guard let axesValues = mpsgraph_shape(axes, axesLen) else {
+        return nil
+    }
     guard #available(macOS 14.0, *) else {
         return nil
     }
@@ -152,7 +158,7 @@ public func mpsgraph_graph_fast_fourier_transform(
     let tensor: MPSGraphTensor = mpsgraph_borrow(tensorHandle)
     let descriptor: MPSGraphFFTDescriptor = mpsgraph_borrow(descriptorHandle)
     return mpsgraph_retain(
-        graph.fastFourierTransform(tensor, axes: mpsgraph_shape(axes, axesLen), descriptor: descriptor, name: mpsgraph_optional_name(name))
+        graph.fastFourierTransform(tensor, axes: axesValues, descriptor: descriptor, name: mpsgraph_optional_name(name))
     )
 }
 
@@ -240,12 +246,15 @@ public func mpsgraph_graph_variable_data(
     _ dataTypeRaw: UInt32,
     _ name: UnsafePointer<CChar>?
 ) -> UnsafeMutableRawPointer? {
+    guard let shapeValues = mpsgraph_shape(shape, shapeLen) else {
+        return nil
+    }
     guard let graphHandle, let dataType = mpsgraph_data_type(dataTypeRaw) else {
         return nil
     }
     let graph: MPSGraph = mpsgraph_borrow(graphHandle)
     return mpsgraph_retain(
-        graph.variable(with: mpsgraph_data(bytes, byteLen), shape: mpsgraph_shape(shape, shapeLen), dataType: dataType, name: mpsgraph_optional_name(name))
+        graph.variable(with: mpsgraph_data(bytes, byteLen), shape: shapeValues, dataType: dataType, name: mpsgraph_optional_name(name))
     )
 }
 
@@ -466,6 +475,9 @@ public func mpsgraph_graph_resize(
     _ layoutRaw: UInt,
     _ name: UnsafePointer<CChar>?
 ) -> UnsafeMutableRawPointer? {
+    guard let sizeValues = mpsgraph_shape(size, sizeLen) else {
+        return nil
+    }
     guard #available(macOS 13.0, *) else {
         return nil
     }
@@ -480,7 +492,7 @@ public func mpsgraph_graph_resize(
     return mpsgraph_retain(
         graph.resize(
             imagesTensor,
-            size: mpsgraph_shape(size, sizeLen),
+            size: sizeValues,
             mode: mode,
             centerResult: centerResult,
             alignCorners: alignCorners,
@@ -580,6 +592,9 @@ public func mpsgraph_graph_scatter_nd(
     _ modeRaw: Int,
     _ name: UnsafePointer<CChar>?
 ) -> UnsafeMutableRawPointer? {
+    guard let shapeValues = mpsgraph_shape(shape, shapeLen) else {
+        return nil
+    }
     guard #available(macOS 12.0, *) else {
         return nil
     }
@@ -595,7 +610,7 @@ public func mpsgraph_graph_scatter_nd(
         graph.scatterND(
             withUpdatesTensor: updatesTensor,
             indicesTensor: indicesTensor,
-            shape: mpsgraph_shape(shape, shapeLen),
+            shape: shapeValues,
             batchDimensions: batchDimensions,
             mode: mode,
             name: mpsgraph_optional_name(name)
@@ -614,6 +629,9 @@ public func mpsgraph_graph_scatter(
     _ modeRaw: Int,
     _ name: UnsafePointer<CChar>?
 ) -> UnsafeMutableRawPointer? {
+    guard let shapeValues = mpsgraph_shape(shape, shapeLen) else {
+        return nil
+    }
     guard #available(macOS 12.0, *) else {
         return nil
     }
@@ -629,7 +647,7 @@ public func mpsgraph_graph_scatter(
         graph.scatter(
             updatesTensor,
             indices: indicesTensor,
-            shape: mpsgraph_shape(shape, shapeLen),
+            shape: shapeValues,
             axis: axis,
             mode: mode,
             name: mpsgraph_optional_name(name)
@@ -648,6 +666,9 @@ public func mpsgraph_graph_scatter_along_axis(
     _ modeRaw: Int,
     _ name: UnsafePointer<CChar>?
 ) -> UnsafeMutableRawPointer? {
+    guard let shapeValues = mpsgraph_shape(shape, shapeLen) else {
+        return nil
+    }
     guard #available(macOS 12.3, *) else {
         return nil
     }
@@ -664,7 +685,7 @@ public func mpsgraph_graph_scatter_along_axis(
             axis,
             updates: updatesTensor,
             indices: indicesTensor,
-            shape: mpsgraph_shape(shape, shapeLen),
+            shape: shapeValues,
             mode: mode,
             name: mpsgraph_optional_name(name)
         )
@@ -719,6 +740,9 @@ public func mpsgraph_graph_sparse_tensor_with_descriptor(
     _ shapeLen: Int,
     _ name: UnsafePointer<CChar>?
 ) -> UnsafeMutableRawPointer? {
+    guard let shapeValues = mpsgraph_shape(shape, shapeLen) else {
+        return nil
+    }
     guard #available(macOS 12.0, *) else {
         return nil
     }
@@ -733,7 +757,7 @@ public func mpsgraph_graph_sparse_tensor_with_descriptor(
         graph.sparseTensor(
             sparseTensorWithDescriptor: descriptor,
             tensors: tensors,
-            shape: mpsgraph_shape(shape, shapeLen),
+            shape: shapeValues,
             name: mpsgraph_optional_name(name)
         )
     )

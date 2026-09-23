@@ -41,19 +41,22 @@ func mpsgraph_data(_ bytes: UnsafeRawPointer?, _ byteLen: Int) -> Data {
 }
 
 @inline(__always)
-func mpsgraph_optional_shape(_ shape: UnsafePointer<UInt>?, _ shapeLen: Int) -> [NSNumber]? {
+func mpsgraph_shape(_ shape: UnsafePointer<UInt>?, _ shapeLen: Int) -> [NSNumber]? {
+    guard shapeLen > 0 else {
+        return shapeLen == 0 ? [] : nil
+    }
     guard let shape else {
         return nil
     }
-    return (0..<shapeLen).map { NSNumber(value: Int(shape[$0])) }
-}
-
-@inline(__always)
-func mpsgraph_shape(_ shape: UnsafePointer<UInt>?, _ shapeLen: Int) -> [NSNumber] {
-    guard let shape else {
-        return []
+    var values = [NSNumber]()
+    values.reserveCapacity(shapeLen)
+    for index in 0..<shapeLen {
+        guard let value = Int(exactly: shape[index]) else {
+            return nil
+        }
+        values.append(NSNumber(value: value))
     }
-    return (0..<shapeLen).map { NSNumber(value: Int(shape[$0])) }
+    return values
 }
 
 @inline(__always)
@@ -62,7 +65,13 @@ func mpsgraph_shapes(
     _ shapeLengths: UnsafePointer<UInt>?,
     count: Int
 ) -> [[NSNumber]]? {
-    guard count == 0 || shapeLengths != nil else {
+    guard count >= 0 else {
+        return nil
+    }
+    guard count > 0 else {
+        return []
+    }
+    guard let shapeLengths else {
         return nil
     }
 
@@ -71,11 +80,11 @@ func mpsgraph_shapes(
     shapes.reserveCapacity(count)
 
     for index in 0..<count {
-        let shapeLen = Int(shapeLengths![index])
-        guard shapeLen == 0 || flatShapes != nil else {
+        guard let shapeLen = Int(exactly: shapeLengths[index]),
+              let shape = mpsgraph_shape(flatShapes.map { $0 + offset }, shapeLen)
+        else {
             return nil
         }
-        let shape = (0..<shapeLen).map { NSNumber(value: Int(flatShapes![offset + $0])) }
         shapes.append(shape)
         offset += shapeLen
     }
@@ -85,7 +94,65 @@ func mpsgraph_shapes(
 
 @inline(__always)
 func mpsgraph_data_type(_ rawValue: UInt32) -> MPSDataType? {
-    MPSDataType(rawValue: rawValue)
+    guard mpsgraph_data_type_is_available(rawValue) else {
+        return nil
+    }
+    return MPSDataType(rawValue: rawValue)
+}
+
+func mpsgraph_data_type_is_available(_ rawValue: UInt32) -> Bool {
+    switch rawValue {
+    case 0x1000_0020, 0x1000_0010, 0x2000_0008, 0x2000_0010, 0x2000_0020, 0x2000_0040,
+         0x0000_0008, 0x0000_0010, 0x0000_0020, 0x0000_0040, 0x8000_0008, 0x4000_0008:
+        return true
+    case 0x1100_0020, 0x1100_0040:
+        if #available(macOS 13.1, *) {
+            return true
+        }
+        return false
+    case 0x9000_0010:
+        if #available(macOS 14.0, *) {
+            return true
+        }
+        return false
+    case 0x2000_0004, 0x0000_0004:
+        if #available(macOS 15.0, *) {
+            return true
+        }
+        return false
+    case 0x2000_0002, 0x0000_0002:
+        if #available(macOS 15.4, *) {
+            return true
+        }
+        return false
+    case 0x9100_0020:
+        if #available(macOS 26.3, *) {
+            return true
+        }
+        return false
+    case 0x1043_0008, 0x1052_0008, 0x1080_0008, 0x1021_0004:
+        if #available(macOS 27.0, *) {
+            return true
+        }
+        return false
+    default:
+        return false
+    }
+}
+
+func mpsgraph_packed_byte_count(_ dimensions: [Int], _ dataType: MPSDataType) -> Int? {
+    var bits = Int(dataType.rawValue & 0xFFFF)
+    for dimension in dimensions {
+        guard dimension >= 0 else {
+            return nil
+        }
+        let (product, overflow) = bits.multipliedReportingOverflow(by: dimension)
+        guard !overflow else {
+            return nil
+        }
+        bits = product
+    }
+    return bits / 8 + (bits % 8 == 0 ? 0 : 1)
 }
 
 @inline(__always)

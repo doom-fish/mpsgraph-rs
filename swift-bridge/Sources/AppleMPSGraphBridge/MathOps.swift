@@ -263,12 +263,15 @@ public func mpsgraph_graph_reduction_axes(
     _ axesLen: Int,
     _ name: UnsafePointer<CChar>?
 ) -> UnsafeMutableRawPointer? {
+    guard let axesValues = mpsgraph_shape(axes, axesLen) else {
+        return nil
+    }
     guard let graphHandle, let tensorHandle else {
         return nil
     }
     let graph: MPSGraph = mpsgraph_borrow(graphHandle)
     let tensor: MPSGraphTensor = mpsgraph_borrow(tensorHandle)
-    let axes = mpsgraph_shape(axes, axesLen)
+    let axes = axesValues
     let name = mpsgraph_optional_name(name)
     let result: MPSGraphTensor
 

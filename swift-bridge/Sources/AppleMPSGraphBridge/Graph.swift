@@ -20,9 +20,17 @@ public func mpsgraph_graph_placeholder(
         return nil
     }
 
+    var shapeValues: [NSNumber]?
+    if shape != nil {
+        guard let checkedShape = mpsgraph_shape(shape, shapeLen) else {
+            return nil
+        }
+        shapeValues = checkedShape
+    }
+
     let graph: MPSGraph = mpsgraph_borrow(graphHandle)
     let tensor = graph.placeholder(
-        shape: mpsgraph_optional_shape(shape, shapeLen),
+        shape: shapeValues,
         dataType: dataType,
         name: mpsgraph_optional_name(name)
     )
@@ -38,6 +46,9 @@ public func mpsgraph_graph_constant_data(
     _ shapeLen: Int,
     _ dataTypeRaw: UInt32
 ) -> UnsafeMutableRawPointer? {
+    guard let shapeValues = mpsgraph_shape(shape, shapeLen) else {
+        return nil
+    }
     guard let graphHandle, let dataType = mpsgraph_data_type(dataTypeRaw) else {
         return nil
     }
@@ -46,7 +57,7 @@ public func mpsgraph_graph_constant_data(
     }
 
     let graph: MPSGraph = mpsgraph_borrow(graphHandle)
-    let tensor = graph.constant(mpsgraph_data(bytes, byteLen), shape: mpsgraph_shape(shape, shapeLen), dataType: dataType)
+    let tensor = graph.constant(mpsgraph_data(bytes, byteLen), shape: shapeValues, dataType: dataType)
     return mpsgraph_retain(tensor)
 }
 
@@ -72,12 +83,15 @@ public func mpsgraph_graph_constant_scalar_shaped(
     _ shapeLen: Int,
     _ dataTypeRaw: UInt32
 ) -> UnsafeMutableRawPointer? {
+    guard let shapeValues = mpsgraph_shape(shape, shapeLen) else {
+        return nil
+    }
     guard let graphHandle, let dataType = mpsgraph_data_type(dataTypeRaw) else {
         return nil
     }
 
     let graph: MPSGraph = mpsgraph_borrow(graphHandle)
-    return mpsgraph_retain(graph.constant(scalar, shape: mpsgraph_shape(shape, shapeLen), dataType: dataType))
+    return mpsgraph_retain(graph.constant(scalar, shape: shapeValues, dataType: dataType))
 }
 
 func mpsgraph_binary_tensor_op(
@@ -212,8 +226,11 @@ public func mpsgraph_graph_reshape(
     _ shapeLen: Int,
     _ name: UnsafePointer<CChar>?
 ) -> UnsafeMutableRawPointer? {
-    mpsgraph_unary_tensor_op(graphHandle, tensorHandle) {
-        $0.reshape($1, shape: mpsgraph_shape(shape, shapeLen), name: mpsgraph_optional_name(name))
+    guard let shapeValues = mpsgraph_shape(shape, shapeLen) else {
+        return nil
+    }
+    return mpsgraph_unary_tensor_op(graphHandle, tensorHandle) {
+        $0.reshape($1, shape: shapeValues, name: mpsgraph_optional_name(name))
     }
 }
 
@@ -225,12 +242,15 @@ public func mpsgraph_graph_transpose(
     _ permutationLen: Int,
     _ name: UnsafePointer<CChar>?
 ) -> UnsafeMutableRawPointer? {
+    guard let permutationValues = mpsgraph_shape(permutation, permutationLen) else {
+        return nil
+    }
     guard #available(macOS 13.0, *) else {
         return nil
     }
 
     return mpsgraph_unary_tensor_op(graphHandle, tensorHandle) {
-        $0.transpose($1, permutation: mpsgraph_shape(permutation, permutationLen), name: mpsgraph_optional_name(name))
+        $0.transpose($1, permutation: permutationValues, name: mpsgraph_optional_name(name))
     }
 }
 
@@ -256,12 +276,15 @@ public func mpsgraph_graph_broadcast(
     _ shapeLen: Int,
     _ name: UnsafePointer<CChar>?
 ) -> UnsafeMutableRawPointer? {
+    guard let shapeValues = mpsgraph_shape(shape, shapeLen) else {
+        return nil
+    }
     guard #available(macOS 12.0, *) else {
         return nil
     }
 
     return mpsgraph_unary_tensor_op(graphHandle, tensorHandle) {
-        $0.broadcast($1, shape: mpsgraph_shape(shape, shapeLen), name: mpsgraph_optional_name(name))
+        $0.broadcast($1, shape: shapeValues, name: mpsgraph_optional_name(name))
     }
 }
 
@@ -272,13 +295,16 @@ func mpsgraph_axes_tensor_op(
     _ axesLen: Int,
     _ body: (MPSGraph, MPSGraphTensor, [NSNumber]) -> MPSGraphTensor
 ) -> UnsafeMutableRawPointer? {
+    guard let axesValues = mpsgraph_shape(axes, axesLen) else {
+        return nil
+    }
     guard let graphHandle, let tensorHandle else {
         return nil
     }
 
     let graph: MPSGraph = mpsgraph_borrow(graphHandle)
     let tensor: MPSGraphTensor = mpsgraph_borrow(tensorHandle)
-    return mpsgraph_retain(body(graph, tensor, mpsgraph_shape(axes, axesLen)))
+    return mpsgraph_retain(body(graph, tensor, axesValues))
 }
 
 @_cdecl("mpsgraph_graph_reduction_sum")

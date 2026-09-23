@@ -3,6 +3,7 @@ pub type Result<T> = core::result::Result<T, Error>;
 
 /// Mirrors the `MPSGraph` framework counterpart for `Error`.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum Error {
 /// Mirrors the `MPSGraph` framework case `InvalidLength`.
     InvalidLength { expected: usize, actual: usize },
@@ -10,6 +11,14 @@ pub enum Error {
     OperationFailed(&'static str),
 /// Mirrors the `MPSGraph` framework case `UnsupportedDataType`.
     UnsupportedDataType(u32),
+    BufferTooSmall {
+        required: usize,
+        length: usize,
+    },
+    Overflow,
+    InvalidShape(&'static str),
+    ExecutionFailed(String),
+    Unsupported(&'static str),
 }
 
 impl core::fmt::Display for Error {
@@ -25,6 +34,14 @@ impl core::fmt::Display for Error {
             Self::UnsupportedDataType(data_type) => {
                 write!(f, "unsupported MPSDataType raw value: {data_type:#x}")
             }
+            Self::BufferTooSmall { required, length } => write!(
+                f,
+                "Metal buffer too small: {required} bytes required, buffer has {length}"
+            ),
+            Self::Overflow => f.write_str("size computation overflowed"),
+            Self::InvalidShape(message) => write!(f, "invalid shape or axis: {message}"),
+            Self::ExecutionFailed(message) => write!(f, "graph execution failed: {message}"),
+            Self::Unsupported(message) => write!(f, "unsupported: {message}"),
         }
     }
 }

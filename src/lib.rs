@@ -46,9 +46,9 @@ pub use crate::execution::{
 };
 /// Re-exports the `MPSGraph` framework surface for this item.
 pub use crate::graph::{
-    data_type, data_type_size, padding_mode, padding_style, tensor_named_data_layout,
-    Convolution2DDescriptor, Convolution2DDescriptorInfo, Executable, Feed, FeedDescription, Graph,
-    Pooling2DDescriptor, Pooling2DDescriptorInfo, Tensor,
+    data_type, data_type_bits, data_type_size, padding_mode, padding_style,
+    tensor_named_data_layout, Convolution2DDescriptor, Convolution2DDescriptorInfo, Executable,
+    Feed, FeedDescription, Graph, Pooling2DDescriptor, Pooling2DDescriptorInfo, Tensor,
 };
 /// Re-exports the `MPSGraph` framework surface for this item.
 pub use crate::ops::{BinaryArithmeticOp, ReductionAxesOp, ReductionAxisOp, UnaryArithmeticOp};

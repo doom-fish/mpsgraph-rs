@@ -12,17 +12,22 @@ public func mpsgraph_tensor_data_new_with_bytes(
     _ shapeLen: Int,
     _ dataTypeRaw: UInt32
 ) -> UnsafeMutableRawPointer? {
+    guard let shapeValues = mpsgraph_shape(shape, shapeLen) else {
+        return nil
+    }
     guard let deviceHandle, let dataType = mpsgraph_data_type(dataTypeRaw) else {
         return nil
     }
-    guard byteLen == 0 || bytes != nil else {
+    guard byteLen == 0 || bytes != nil,
+          mpsgraph_packed_byte_count(shapeValues.map { $0.intValue }, dataType) == byteLen
+    else {
         return nil
     }
 
     let tensorData = MPSGraphTensorData(
         device: mpsgraph_graph_device(deviceHandle),
         data: mpsgraph_data(bytes, byteLen),
-        shape: mpsgraph_shape(shape, shapeLen),
+        shape: shapeValues,
         dataType: dataType
     )
     return mpsgraph_retain(tensorData)
@@ -35,12 +40,20 @@ public func mpsgraph_tensor_data_new_with_buffer(
     _ shapeLen: Int,
     _ dataTypeRaw: UInt32
 ) -> UnsafeMutableRawPointer? {
+    guard let shapeValues = mpsgraph_shape(shape, shapeLen) else {
+        return nil
+    }
     guard let bufferHandle, let dataType = mpsgraph_data_type(dataTypeRaw) else {
         return nil
     }
 
     let buffer: MTLBuffer = mpsgraph_borrow(bufferHandle)
-    let tensorData = MPSGraphTensorData(buffer, shape: mpsgraph_shape(shape, shapeLen), dataType: dataType)
+    guard let required = mpsgraph_packed_byte_count(shapeValues.map { $0.intValue }, dataType),
+          buffer.length >= required
+    else {
+        return nil
+    }
+    let tensorData = MPSGraphTensorData(buffer, shape: shapeValues, dataType: dataType)
     return mpsgraph_retain(tensorData)
 }
 
@@ -48,11 +61,14 @@ public func mpsgraph_tensor_data_new_with_buffer(
 public func mpsgraph_tensor_data_new_with_tensor(
     _ tensorHandle: UnsafeMutableRawPointer?
 ) -> UnsafeMutableRawPointer? {
-    guard #available(macOS 16.0, *), let tensorHandle else {
+    guard #available(macOS 26.0, *), let tensorHandle else {
         return nil
     }
 
     let tensor: MTLTensor = mpsgraph_borrow(tensorHandle)
+    guard tensor.usage.contains(.machineLearning) else {
+        return nil
+    }
     let tensorData = MPSGraphTensorData(tensor)
     return mpsgraph_retain(tensorData)
 }
@@ -107,7 +123,14 @@ public func mpsgraph_tensor_data_read_bytes(
     }
 
     let tensorData: MPSGraphTensorData = mpsgraph_borrow(handle)
-    tensorData.mpsndarray().readBytes(dst, strideBytes: nil)
+    let array = tensorData.mpsndarray()
+    let dimensions = (0..<array.numberOfDimensions).map { array.length(ofDimension: $0) }
+    guard let required = mpsgraph_packed_byte_count(dimensions, array.dataType),
+          dstLen >= required
+    else {
+        return false
+    }
+    array.readBytes(dst, strideBytes: nil)
     return true
 }
 

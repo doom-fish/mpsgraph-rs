@@ -1,16 +1,9 @@
 use crate::error::{Error, Result};
 use crate::ffi;
-use crate::graph::{data_type, data_type_size};
+use crate::graph::{checked_byte_len, data_type, data_type_bits};
 use apple_metal::{MetalBuffer, MetalDevice, MetalTensor};
 use core::ffi::c_void;
 use core::ptr;
-
-fn checked_byte_len(shape: &[usize], data_type: u32) -> Option<usize> {
-    let element_size = data_type_size(data_type)?;
-    shape
-        .iter()
-        .try_fold(element_size, |acc, dimension| acc.checked_mul(*dimension))
-}
 
 /// Safe owner for an Objective-C `MPSGraphTensorData`.
 pub struct TensorData {
@@ -80,8 +73,15 @@ impl TensorData {
     }
 
     /// Alias an existing `MTLBuffer` as tensor data.
-    #[must_use]
-    pub fn from_buffer(buffer: &MetalBuffer, shape: &[usize], data_type: u32) -> Option<Self> {
+    pub fn from_buffer(buffer: &MetalBuffer, shape: &[usize], data_type: u32) -> Result<Self> {
+        if data_type_bits(data_type).is_none() {
+            return Err(Error::UnsupportedDataType(data_type));
+        }
+        let required = checked_byte_len(shape, data_type).ok_or(Error::Overflow)?;
+        let length = buffer.length();
+        if required > length {
+            return Err(Error::BufferTooSmall { required, length });
+        }
         // SAFETY: The buffer handle remains valid for the duration of the FFI call.
         let ptr = unsafe {
             ffi::mpsgraph_tensor_data_new_with_buffer(
@@ -92,9 +92,11 @@ impl TensorData {
             )
         };
         if ptr.is_null() {
-            None
+            Err(Error::OperationFailed(
+                "MPSGraphTensorData rejected the buffer",
+            ))
         } else {
-            Some(Self { ptr })
+            Ok(Self { ptr })
         }
     }
 

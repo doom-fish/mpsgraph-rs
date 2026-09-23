@@ -226,6 +226,15 @@ public func mpsgraph_depthwise_convolution3d_descriptor_new(
     _ paddingStyleRaw: UInt,
     _ channelDimensionIndex: Int
 ) -> UnsafeMutableRawPointer? {
+    guard let paddingValuesValues = mpsgraph_shape(paddingValues, paddingValuesLen) else {
+        return nil
+    }
+    guard let dilationRatesValues = mpsgraph_shape(dilationRates, dilationRatesLen) else {
+        return nil
+    }
+    guard let stridesValues = mpsgraph_shape(strides, stridesLen) else {
+        return nil
+    }
     guard #available(macOS 12.0, *) else {
         return nil
     }
@@ -236,9 +245,9 @@ public func mpsgraph_depthwise_convolution3d_descriptor_new(
     }
 
     let descriptor = MPSGraphDepthwiseConvolution3DOpDescriptor()
-    descriptor.strides = mpsgraph_shape(strides, stridesLen)
-    descriptor.dilationRates = mpsgraph_shape(dilationRates, dilationRatesLen)
-    descriptor.paddingValues = mpsgraph_shape(paddingValues, paddingValuesLen)
+    descriptor.strides = stridesValues
+    descriptor.dilationRates = dilationRatesValues
+    descriptor.paddingValues = paddingValuesValues
     descriptor.paddingStyle = paddingStyle
     descriptor.channelDimensionIndex = channelDimensionIndex
     return mpsgraph_retain(descriptor)
@@ -316,6 +325,18 @@ public func mpsgraph_pooling4d_descriptor_new(
     _ returnIndicesModeRaw: UInt,
     _ returnIndicesDataTypeRaw: UInt32
 ) -> UnsafeMutableRawPointer? {
+    guard let paddingValuesValues = mpsgraph_shape(paddingValues, paddingValuesLen) else {
+        return nil
+    }
+    guard let dilationRatesValues = mpsgraph_shape(dilationRates, dilationRatesLen) else {
+        return nil
+    }
+    guard let stridesValues = mpsgraph_shape(strides, stridesLen) else {
+        return nil
+    }
+    guard let kernelSizesValues = mpsgraph_shape(kernelSizes, kernelSizesLen) else {
+        return nil
+    }
     guard #available(macOS 12.0, *) else {
         return nil
     }
@@ -326,10 +347,10 @@ public func mpsgraph_pooling4d_descriptor_new(
     }
 
     let descriptor = MPSGraphPooling4DOpDescriptor()
-    descriptor.kernelSizes = mpsgraph_shape(kernelSizes, kernelSizesLen)
-    descriptor.strides = mpsgraph_shape(strides, stridesLen)
-    descriptor.dilationRates = mpsgraph_shape(dilationRates, dilationRatesLen)
-    descriptor.paddingValues = mpsgraph_shape(paddingValues, paddingValuesLen)
+    descriptor.kernelSizes = kernelSizesValues
+    descriptor.strides = stridesValues
+    descriptor.dilationRates = dilationRatesValues
+    descriptor.paddingValues = paddingValuesValues
     descriptor.paddingStyle = paddingStyle
     descriptor.ceilMode = ceilMode
     descriptor.includeZeroPadToAverage = includeZeroPadToAverage
@@ -382,6 +403,15 @@ public func mpsgraph_stencil_descriptor_new(
     _ paddingStyleRaw: UInt,
     _ paddingConstant: Float
 ) -> UnsafeMutableRawPointer? {
+    guard let explicitPaddingValues = mpsgraph_shape(explicitPadding, explicitPaddingLen) else {
+        return nil
+    }
+    guard let dilationRatesValues = mpsgraph_shape(dilationRates, dilationRatesLen) else {
+        return nil
+    }
+    guard let stridesValues = mpsgraph_shape(strides, stridesLen) else {
+        return nil
+    }
     guard #available(macOS 12.0, *) else {
         return nil
     }
@@ -396,9 +426,9 @@ public func mpsgraph_stencil_descriptor_new(
     let descriptor = MPSGraphStencilOpDescriptor()
     descriptor.reductionMode = reductionMode
     descriptor.offsets = mpsgraph_optional_signed_shape(offsets, offsetsLen) ?? []
-    descriptor.strides = mpsgraph_shape(strides, stridesLen)
-    descriptor.dilationRates = mpsgraph_shape(dilationRates, dilationRatesLen)
-    descriptor.explicitPadding = mpsgraph_shape(explicitPadding, explicitPaddingLen)
+    descriptor.strides = stridesValues
+    descriptor.dilationRates = dilationRatesValues
+    descriptor.explicitPadding = explicitPaddingValues
     descriptor.boundaryMode = boundaryMode
     descriptor.paddingStyle = paddingStyle
     descriptor.paddingConstant = paddingConstant

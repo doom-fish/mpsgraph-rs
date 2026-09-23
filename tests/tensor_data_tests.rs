@@ -1,0 +1,175 @@
+use apple_metal::{resource_options, MetalBuffer, MetalDevice};
+use apple_mpsgraph::{data_type, data_type_bits, data_type_size, Error, Feed, Graph, TensorData};
+
+fn device() -> MetalDevice {
+    MetalDevice::system_default().expect("no Metal device available")
+}
+
+fn buffer_with(device: &MetalDevice, bytes: &[u8]) -> MetalBuffer {
+    let buffer = device
+        .new_buffer(bytes.len().max(4), resource_options::STORAGE_MODE_SHARED)
+        .expect("buffer");
+    unsafe { buffer.write_bytes(0, bytes) }.expect("write buffer");
+    buffer
+}
+
+fn f32_bytes(values: &[f32]) -> Vec<u8> {
+    values
+        .iter()
+        .flat_map(|value| value.to_ne_bytes())
+        .collect()
+}
+
+fn macos_major() -> u32 {
+    let output = std::process::Command::new("/usr/bin/sw_vers")
+        .arg("-productVersion")
+        .output()
+        .expect("sw_vers");
+    String::from_utf8_lossy(&output.stdout)
+        .trim()
+        .split('.')
+        .next()
+        .and_then(|major| major.parse().ok())
+        .expect("macOS major version")
+}
+
+#[test]
+fn data_type_table_matches_the_sdk_encoding() {
+    let all = [
+        (data_type::FLOAT32, 32),
+        (data_type::FLOAT16, 16),
+        (data_type::BFLOAT16, 16),
+        (data_type::COMPLEX_FLOAT16, 32),
+        (data_type::COMPLEX_FLOAT32, 64),
+        (data_type::COMPLEX_BFLOAT16, 32),
+        (data_type::INT2, 2),
+        (data_type::INT4, 4),
+        (data_type::INT8, 8),
+        (data_type::INT16, 16),
+        (data_type::INT32, 32),
+        (data_type::INT64, 64),
+        (data_type::UINT2, 2),
+        (data_type::UINT4, 4),
+        (data_type::UINT8, 8),
+        (data_type::UINT16, 16),
+        (data_type::UINT32, 32),
+        (data_type::UINT64, 64),
+        (data_type::BOOL, 8),
+        (data_type::UNORM8, 8),
+        (data_type::FLOAT8_E4M3, 8),
+        (data_type::FLOAT8_E5M2, 8),
+        (data_type::FLOAT8_E8M0, 8),
+        (data_type::FLOAT4_E2M1, 4),
+    ];
+    for (raw, bits) in all {
+        assert_eq!(data_type_bits(raw), Some(bits), "{raw:#x}");
+        assert_eq!(usize::try_from(raw & 0xFFFF), Ok(bits), "{raw:#x}");
+        let size = (bits % 8 == 0).then_some(bits / 8);
+        assert_eq!(data_type_size(raw), size, "{raw:#x}");
+    }
+    assert_eq!(data_type_bits(data_type::INVALID), None);
+    assert_eq!(data_type_bits(0x1234_5678), None);
+}
+
+#[test]
+fn from_buffer_needs_room_for_the_whole_shape() {
+    let device = device();
+    let small = buffer_with(&device, &[0; 4]);
+    assert_eq!(
+        TensorData::from_buffer(&small, &[1024, 1024], data_type::FLOAT32).err(),
+        Some(Error::BufferTooSmall {
+            required: 4_194_304,
+            length: 4,
+        })
+    );
+    assert_eq!(
+        TensorData::from_buffer(&small, &[usize::MAX, 2], data_type::FLOAT32).err(),
+        Some(Error::Overflow)
+    );
+    assert_eq!(
+        TensorData::from_buffer(&small, &[1], 0x1234).err(),
+        Some(Error::UnsupportedDataType(0x1234))
+    );
+    let values: Vec<f32> = (1_u8..=15).map(f32::from).collect();
+    let exact = buffer_with(&device, &f32_bytes(&values));
+    assert_eq!(exact.length(), 60);
+    let data = TensorData::from_buffer(&exact, &[5, 3], data_type::FLOAT32).expect("packed rows");
+    assert_eq!(data.shape(), vec![5, 3]);
+    assert_eq!(data.byte_len(), Ok(60));
+    assert_eq!(data.read_f32().expect("read"), values);
+    assert!(TensorData::from_buffer(&exact, &[4, 4], data_type::FLOAT32).is_err());
+}
+
+#[test]
+fn sub_byte_tensor_data_is_packed_across_the_array() {
+    let device = device();
+    let packed = [0x21_u8, 0x43, 0x65];
+    assert!(TensorData::from_bytes(&device, &[0; 4], &[2, 3], data_type::INT4).is_none());
+    let data =
+        TensorData::from_bytes(&device, &packed, &[2, 3], data_type::INT4).expect("int4 data");
+    assert_eq!(data.data_type(), data_type::INT4);
+    assert_eq!(data.byte_len(), Ok(3));
+    assert_eq!(data.read_bytes().expect("read"), packed.to_vec());
+    let pairs = TensorData::from_bytes(&device, &[0b1110_0100], &[4], data_type::UINT2)
+        .expect("uint2 data");
+    assert_eq!(pairs.byte_len(), Ok(1));
+    assert_eq!(pairs.read_bytes().expect("read"), vec![0b1110_0100]);
+}
+
+#[test]
+fn wide_and_complex_types_round_trip() {
+    let device = device();
+    let bf16: Vec<u8> = [0x3F80_u16, 0x4000, 0xBF80, 0x0000]
+        .iter()
+        .flat_map(|value| value.to_ne_bytes())
+        .collect();
+    let data = TensorData::from_bytes(&device, &bf16, &[4], data_type::BFLOAT16).expect("bf16");
+    assert_eq!(data.byte_len(), Ok(8));
+    assert_eq!(data.read_bytes().expect("read"), bf16);
+    let complex = f32_bytes(&[1.0, -1.0, 0.5, 2.0]);
+    let data = TensorData::from_bytes(&device, &complex, &[2], data_type::COMPLEX_FLOAT32)
+        .expect("complex f32");
+    assert_eq!(data.byte_len(), Ok(16));
+    assert_eq!(data.read_bytes().expect("read"), complex);
+}
+
+#[test]
+fn float8_tensor_data_needs_macos_27() {
+    let device = device();
+    let bytes = [0x38_u8, 0x40, 0xB8, 0x00];
+    let data = TensorData::from_bytes(&device, &bytes, &[4], data_type::FLOAT8_E4M3);
+    if macos_major() >= 27 {
+        let data = data.expect("float8 on macOS 27");
+        assert_eq!(data.byte_len(), Ok(4));
+        assert_eq!(data.read_bytes().expect("read"), bytes.to_vec());
+    } else {
+        assert!(data.is_none());
+    }
+}
+
+#[test]
+fn oversized_dimensions_fail_instead_of_trapping() {
+    let device = device();
+    let graph = Graph::new().expect("graph");
+    assert!(graph
+        .placeholder(Some(&[usize::MAX]), data_type::FLOAT32, None)
+        .is_none());
+    assert!(graph
+        .constant_scalar_shaped(1.0, &[usize::MAX, 0], data_type::FLOAT32)
+        .is_none());
+    assert!(TensorData::from_bytes(&device, &[], &[usize::MAX, 0], data_type::FLOAT32).is_none());
+    assert!(graph.placeholder(Some(&[2]), 0x1234, None).is_none());
+    let input = graph
+        .placeholder(Some(&[2, 3]), data_type::FLOAT32, None)
+        .expect("placeholder");
+    let doubled = graph.addition(&input, &input, None).expect("addition");
+    let data = TensorData::from_f32_slice(&device, &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0], &[2, 3])
+        .expect("data");
+    let results = graph
+        .run(&[Feed::new(&input, &data)], &[&doubled])
+        .expect("run");
+    assert_eq!(
+        results[0].read_f32().expect("read"),
+        vec![2.0, 4.0, 6.0, 8.0, 10.0, 12.0]
+    );
+}
