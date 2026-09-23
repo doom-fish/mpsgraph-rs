@@ -1,5 +1,102 @@
-use apple_metal::{resource_options, MetalBuffer, MetalDevice};
+use apple_metal::{resource_options, MetalBuffer, MetalDevice, MetalTensor};
 use apple_mpsgraph::{data_type, data_type_bits, data_type_size, Error, Feed, Graph, TensorData};
+use core::ffi::{c_char, c_void};
+use core::ptr;
+
+type Id = *mut c_void;
+
+#[link(name = "objc")]
+extern "C" {
+    fn objc_getClass(name: *const c_char) -> Id;
+    fn sel_registerName(name: *const c_char) -> Id;
+    fn objc_msgSend();
+}
+
+macro_rules! msg_send {
+    ($receiver:expr, $selector:expr $(, $arg:expr => $arg_ty:ty)* ; -> $ret:ty) => {
+        core::mem::transmute::<unsafe extern "C" fn(), unsafe extern "C" fn(Id, Id $(, $arg_ty)*) -> $ret>(
+            objc_msgSend,
+        )($receiver, sel_registerName($selector.as_ptr()) $(, $arg)*)
+    };
+}
+
+const MTL_TENSOR_DATA_TYPE_FLOAT32: isize = 3;
+const MTL_TENSOR_USAGE_COMPUTE: usize = 1;
+const MTL_TENSOR_USAGE_MACHINE_LEARNING: usize = 1 << 2;
+
+unsafe fn tensor_extents(values: &[isize]) -> Id {
+    let extents = msg_send!(objc_getClass(c"MTLTensorExtents".as_ptr()), c"alloc"; -> Id);
+    msg_send!(
+        extents,
+        c"initWithRank:values:",
+        values.len() => usize,
+        values.as_ptr() => *const isize;
+        -> Id
+    )
+}
+
+unsafe fn release(object: Id) {
+    msg_send!(object, c"release"; -> ());
+}
+
+unsafe fn replace_tensor_values(tensor: Id, extents: &[isize], values: &[f32]) {
+    let origin = tensor_extents(&vec![0; extents.len()]);
+    let dimensions = tensor_extents(extents);
+    let strides = extents
+        .iter()
+        .scan(1_isize, |stride, extent| {
+            let current = *stride;
+            *stride *= extent;
+            Some(current)
+        })
+        .collect::<Vec<_>>();
+    let strides = tensor_extents(&strides);
+    msg_send!(
+        tensor,
+        c"replaceSliceOrigin:sliceDimensions:withBytes:strides:",
+        origin => Id,
+        dimensions => Id,
+        values.as_ptr().cast::<c_void>() => *const c_void,
+        strides => Id;
+        -> ()
+    );
+    release(strides);
+    release(dimensions);
+    release(origin);
+}
+
+fn metal_tensor(
+    device: &MetalDevice,
+    shape: &[usize],
+    usage: usize,
+    values: &[f32],
+) -> MetalTensor {
+    let extents = shape
+        .iter()
+        .rev()
+        .map(|extent| isize::try_from(*extent).expect("extent"))
+        .collect::<Vec<_>>();
+    unsafe {
+        let descriptor = msg_send!(objc_getClass(c"MTLTensorDescriptor".as_ptr()), c"new"; -> Id);
+        let dimensions = tensor_extents(&extents);
+        msg_send!(descriptor, c"setDimensions:", dimensions => Id; -> ());
+        msg_send!(descriptor, c"setDataType:", MTL_TENSOR_DATA_TYPE_FLOAT32 => isize; -> ());
+        msg_send!(descriptor, c"setUsage:", usage => usize; -> ());
+        let mut error: Id = ptr::null_mut();
+        let tensor = msg_send!(
+            device.as_ptr(),
+            c"newTensorWithDescriptor:error:",
+            descriptor => Id,
+            &raw mut error => *mut Id;
+            -> Id
+        );
+        release(dimensions);
+        release(descriptor);
+        assert!(!tensor.is_null(), "newTensorWithDescriptor failed");
+        replace_tensor_values(tensor, &extents, values);
+        MetalTensor::from_raw(tensor)
+    }
+}
 
 fn device() -> MetalDevice {
     MetalDevice::system_default().expect("no Metal device available")
@@ -172,4 +269,57 @@ fn oversized_dimensions_fail_instead_of_trapping() {
         results[0].read_f32().expect("read"),
         vec![2.0, 4.0, 6.0, 8.0, 10.0, 12.0]
     );
+}
+
+#[test]
+fn metal_tensors_alias_as_tensor_data_on_macos_26() {
+    if macos_major() < 26 {
+        return;
+    }
+    let device = device();
+    let values = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+    let usage = MTL_TENSOR_USAGE_COMPUTE | MTL_TENSOR_USAGE_MACHINE_LEARNING;
+    let tensor = metal_tensor(&device, &[2, 3], usage, &values);
+    let data = TensorData::from_tensor(&tensor).expect("tensor data from MTLTensor");
+    assert_eq!(data.shape(), vec![2, 3]);
+    assert_eq!(data.data_type(), data_type::FLOAT32);
+    assert_eq!(data.byte_len(), Ok(24));
+    assert_eq!(data.read_f32().expect("read"), values.to_vec());
+
+    let updated = [-1.0, -2.0, -3.0, -4.0, -5.0, -6.0];
+    unsafe { replace_tensor_values(tensor.as_ptr(), &[3, 2], &updated) };
+    assert_eq!(data.read_f32().expect("read alias"), updated.to_vec());
+
+    let compute_only = metal_tensor(&device, &[2, 3], MTL_TENSOR_USAGE_COMPUTE, &values);
+    assert!(TensorData::from_tensor(&compute_only).is_none());
+}
+
+#[test]
+fn reads_refuse_destinations_shorter_than_the_tensor() {
+    let device = device();
+    let data = TensorData::from_f32_slice(&device, &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0], &[2, 3])
+        .expect("data");
+    let mut destination = vec![0xA5_u8; 32];
+    let short = unsafe {
+        apple_mpsgraph::ffi::mpsgraph_tensor_data_read_bytes(
+            data.as_ptr(),
+            destination.as_mut_ptr().cast(),
+            20,
+        )
+    };
+    assert!(!short);
+    assert!(destination.iter().all(|byte| *byte == 0xA5));
+    let exact = unsafe {
+        apple_mpsgraph::ffi::mpsgraph_tensor_data_read_bytes(
+            data.as_ptr(),
+            destination.as_mut_ptr().cast(),
+            24,
+        )
+    };
+    assert!(exact);
+    assert_eq!(
+        &destination[..24],
+        f32_bytes(&[1.0, 2.0, 3.0, 4.0, 5.0, 6.0]).as_slice()
+    );
+    assert!(destination[24..].iter().all(|byte| *byte == 0xA5));
 }
