@@ -1,7 +1,7 @@
 use crate::data::TensorData;
 use crate::error::{Error, Result};
 use crate::ffi;
-use crate::graph::{Executable, FeedDescription, Graph, Tensor};
+use crate::graph::{feed_descriptions_match, Executable, FeedDescription, Graph, Tensor};
 use crate::types::{
     collect_owned_tensors, collect_shaped_type_array_box, collect_tensor_data_array_box, ShapedType,
 };
@@ -516,6 +516,9 @@ impl Graph {
         targets: &[&Tensor],
         descriptor: Option<&CompilationDescriptor>,
     ) -> Option<Executable> {
+        if !feed_descriptions_match(feeds) {
+            return None;
+        }
         let feed_tensors = feeds
             .iter()
             .map(|feed| feed.tensor.as_ptr())
@@ -554,7 +557,7 @@ impl Graph {
         if ptr.is_null() {
             None
         } else {
-            Some(Executable::from_raw(ptr, targets.len()))
+            Some(Executable::from_raw(ptr, targets.len()).with_feed_types(feeds))
         }
     }
 }
@@ -666,6 +669,10 @@ impl Executable {
         results: Option<&[&TensorData]>,
         descriptor: Option<&ExecutableExecutionDescriptor>,
     ) -> Result<Vec<TensorData>> {
+        self.check_inputs(inputs)?;
+        if let Some(results) = results {
+            self.check_results(results)?;
+        }
         let input_handles = inputs
             .iter()
             .map(|value| value.as_ptr())
@@ -708,6 +715,10 @@ impl Executable {
         results: Option<&[&TensorData]>,
         descriptor: Option<&ExecutableExecutionDescriptor>,
     ) -> Result<Vec<TensorData>> {
+        self.check_inputs(inputs)?;
+        if let Some(results) = results {
+            self.check_results(results)?;
+        }
         let input_handles = inputs
             .iter()
             .map(|value| value.as_ptr())

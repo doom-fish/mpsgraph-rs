@@ -204,7 +204,7 @@ fn wrap_tensor_data_results(
 }
 
 macro_rules! impl_binary_tensor_op {
-    ($fn_name:ident, $ffi_name:ident) => {
+    ($fn_name:ident, $ffi_name:ident, $compatible:ident) => {
 /// Calls the `MPSGraph` framework counterpart for this method.
         #[must_use]
         pub fn $fn_name(
@@ -213,6 +213,9 @@ macro_rules! impl_binary_tensor_op {
             secondary: &Tensor,
             name: Option<&str>,
         ) -> Option<Tensor> {
+            if !$compatible(primary, secondary) {
+                return None;
+            }
             let name = optional_cstring(name);
             // SAFETY: All pointers originate from safe wrappers and remain alive for the duration of the call.
             let ptr = unsafe {
@@ -251,6 +254,9 @@ macro_rules! impl_axes_tensor_op {
             axes: &[usize],
             name: Option<&str>,
         ) -> Option<Tensor> {
+            if !axes_in_range(tensor, axes) {
+                return None;
+            }
             let name = optional_cstring(name);
             // SAFETY: All pointers originate from safe wrappers and remain alive for the duration of the call.
             let ptr = unsafe {
@@ -474,6 +480,131 @@ impl Tensor {
     }
 }
 
+pub(crate) fn volume(dimensions: &[usize]) -> Option<usize> {
+    dimensions.iter().try_fold(1_usize, |elements, dimension| {
+        elements.checked_mul(*dimension)
+    })
+}
+
+fn static_dimensions(tensor: &Tensor) -> Option<Vec<usize>> {
+    tensor
+        .shape()?
+        .into_iter()
+        .map(|dimension| usize::try_from(dimension).ok())
+        .collect()
+}
+
+fn dimension_matches(expected: isize, actual: usize) -> bool {
+    expected < 0 || usize::try_from(expected).ok() == Some(actual)
+}
+
+pub(crate) fn axis_in_range(tensor: &Tensor, axis: isize) -> bool {
+    tensor.shape().is_none_or(|shape| {
+        isize::try_from(shape.len()).is_ok_and(|rank| (-rank..rank).contains(&axis))
+    })
+}
+
+pub(crate) fn axes_in_range(tensor: &Tensor, axes: &[usize]) -> bool {
+    tensor
+        .shape()
+        .is_none_or(|shape| axes.iter().all(|axis| *axis < shape.len()))
+}
+
+fn broadcastable(left: &[isize], right: &[isize]) -> bool {
+    left.iter()
+        .rev()
+        .zip(right.iter().rev())
+        .all(|(a, b)| a == b || *a == 1 || *b == 1 || *a < 0 || *b < 0)
+}
+
+pub(crate) fn binary_operands_compatible(primary: &Tensor, secondary: &Tensor) -> bool {
+    primary.data_type() == secondary.data_type()
+        && match (primary.shape(), secondary.shape()) {
+            (Some(left), Some(right)) => broadcastable(&left, &right),
+            _ => true,
+        }
+}
+
+fn matrix_operands_compatible(primary: &Tensor, secondary: &Tensor) -> bool {
+    if primary.data_type() != secondary.data_type() {
+        return false;
+    }
+    let (Some(mut left), Some(mut right)) = (primary.shape(), secondary.shape()) else {
+        return true;
+    };
+    if left.is_empty() || right.is_empty() {
+        return false;
+    }
+    for shape in [&mut left, &mut right] {
+        if shape.len() == 1 {
+            shape.insert(0, 1);
+        }
+    }
+    let (inner, outer) = (left[left.len() - 1], right[right.len() - 2]);
+    (inner < 0 || outer < 0 || inner == outer)
+        && broadcastable(&left[..left.len() - 2], &right[..right.len() - 2])
+}
+
+fn reshape_is_valid(tensor: &Tensor, shape: &[usize]) -> bool {
+    let target = volume(shape);
+    target.is_some() && static_dimensions(tensor).is_none_or(|source| volume(&source) == target)
+}
+
+fn is_permutation(tensor: &Tensor, permutation: &[usize]) -> bool {
+    let mut seen = vec![false; permutation.len()];
+    permutation
+        .iter()
+        .all(|axis| *axis < seen.len() && !core::mem::replace(&mut seen[*axis], true))
+        && tensor
+            .shape()
+            .is_none_or(|shape| shape.len() == permutation.len())
+}
+
+fn slice_in_range(tensor: &Tensor, dimension: usize, start: isize, length: isize) -> bool {
+    if length < 0 {
+        return false;
+    }
+    let Some(shape) = tensor.shape() else {
+        return true;
+    };
+    let Some(&size) = shape.get(dimension) else {
+        return false;
+    };
+    if size < 0 {
+        return true;
+    }
+    let start = if start < 0 { start + size } else { start };
+    (0..=size).contains(&start) && start.checked_add(length).is_some_and(|end| end <= size)
+}
+
+fn broadcast_is_valid(tensor: &Tensor, shape: &[usize]) -> bool {
+    tensor.shape().is_none_or(|source| {
+        source.len() <= shape.len()
+            && source
+                .iter()
+                .rev()
+                .zip(shape.iter().rev())
+                .all(|(from, to)| *from == 1 || dimension_matches(*from, *to))
+    })
+}
+
+pub(crate) fn feed_matches(tensor: &Tensor, shape: &[usize], data_type: u32) -> bool {
+    tensor.data_type() == data_type
+        && tensor.shape().is_none_or(|expected| {
+            expected.len() == shape.len()
+                && expected
+                    .iter()
+                    .zip(shape)
+                    .all(|(expected, actual)| dimension_matches(*expected, *actual))
+        })
+}
+
+fn feeds_match(feeds: &[Feed<'_>]) -> bool {
+    feeds
+        .iter()
+        .all(|feed| feed_matches(feed.tensor, &feed.data.shape(), feed.data.data_type()))
+}
+
 impl Graph {
 /// Calls the `MPSGraph` framework counterpart for `new`.
     #[must_use]
@@ -576,11 +707,31 @@ impl Graph {
         wrap_tensor(ptr)
     }
 
-    impl_binary_tensor_op!(addition, mpsgraph_graph_addition);
-    impl_binary_tensor_op!(subtraction, mpsgraph_graph_subtraction);
-    impl_binary_tensor_op!(multiplication, mpsgraph_graph_multiplication);
-    impl_binary_tensor_op!(division, mpsgraph_graph_division);
-    impl_binary_tensor_op!(matrix_multiplication, mpsgraph_graph_matrix_multiplication);
+    impl_binary_tensor_op!(
+        addition,
+        mpsgraph_graph_addition,
+        binary_operands_compatible
+    );
+    impl_binary_tensor_op!(
+        subtraction,
+        mpsgraph_graph_subtraction,
+        binary_operands_compatible
+    );
+    impl_binary_tensor_op!(
+        multiplication,
+        mpsgraph_graph_multiplication,
+        binary_operands_compatible
+    );
+    impl_binary_tensor_op!(
+        division,
+        mpsgraph_graph_division,
+        binary_operands_compatible
+    );
+    impl_binary_tensor_op!(
+        matrix_multiplication,
+        mpsgraph_graph_matrix_multiplication,
+        matrix_operands_compatible
+    );
     impl_unary_tensor_op!(relu, mpsgraph_graph_relu);
     impl_unary_tensor_op!(sigmoid, mpsgraph_graph_sigmoid);
     impl_axes_tensor_op!(reduction_sum, mpsgraph_graph_reduction_sum);
@@ -591,6 +742,9 @@ impl Graph {
 /// Calls the `MPSGraph` framework counterpart for `softmax`.
     #[must_use]
     pub fn softmax(&self, tensor: &Tensor, axis: isize, name: Option<&str>) -> Option<Tensor> {
+        if !axis_in_range(tensor, axis) {
+            return None;
+        }
         let name = optional_cstring(name);
         // SAFETY: All pointers originate from safe wrappers and remain alive for the duration of the call.
         let ptr = unsafe {
@@ -602,6 +756,9 @@ impl Graph {
 /// Calls the `MPSGraph` framework counterpart for `reshape`.
     #[must_use]
     pub fn reshape(&self, tensor: &Tensor, shape: &[usize], name: Option<&str>) -> Option<Tensor> {
+        if !reshape_is_valid(tensor, shape) {
+            return None;
+        }
         let name = optional_cstring(name);
         // SAFETY: All pointers originate from safe wrappers and remain alive for the duration of the call.
         let ptr = unsafe {
@@ -624,6 +781,9 @@ impl Graph {
         permutation: &[usize],
         name: Option<&str>,
     ) -> Option<Tensor> {
+        if !is_permutation(tensor, permutation) {
+            return None;
+        }
         let name = optional_cstring(name);
         // SAFETY: All pointers originate from safe wrappers and remain alive for the duration of the call.
         let ptr = unsafe {
@@ -648,6 +808,9 @@ impl Graph {
         length: isize,
         name: Option<&str>,
     ) -> Option<Tensor> {
+        if !slice_in_range(tensor, dimension, start, length) {
+            return None;
+        }
         let name = optional_cstring(name);
         // SAFETY: All pointers originate from safe wrappers and remain alive for the duration of the call.
         let ptr = unsafe {
@@ -671,6 +834,9 @@ impl Graph {
         shape: &[usize],
         name: Option<&str>,
     ) -> Option<Tensor> {
+        if !broadcast_is_valid(tensor, shape) {
+            return None;
+        }
         let name = optional_cstring(name);
         // SAFETY: All pointers originate from safe wrappers and remain alive for the duration of the call.
         let ptr = unsafe {
@@ -763,6 +929,9 @@ impl Graph {
 
 /// Calls the `MPSGraph` framework counterpart for `run`.
     pub fn run(&self, feeds: &[Feed<'_>], targets: &[&Tensor]) -> Result<Vec<TensorData>> {
+        if !feeds_match(feeds) {
+            return Err(Error::InvalidShape(FEED_MISMATCH));
+        }
         let feed_tensors = feeds
             .iter()
             .map(|feed| feed.tensor.as_ptr())
@@ -803,6 +972,9 @@ impl Graph {
         feeds: &[Feed<'_>],
         targets: &[&Tensor],
     ) -> Result<Vec<TensorData>> {
+        if !feeds_match(feeds) {
+            return Err(Error::InvalidShape(FEED_MISMATCH));
+        }
         let feed_tensors = feeds
             .iter()
             .map(|feed| feed.tensor.as_ptr())
@@ -847,6 +1019,9 @@ impl Graph {
         feeds: &[FeedDescription<'_>],
         targets: &[&Tensor],
     ) -> Option<Executable> {
+        if !feed_descriptions_match(feeds) {
+            return None;
+        }
         let feed_tensors = feeds
             .iter()
             .map(|feed| feed.tensor.as_ptr())
@@ -882,15 +1057,24 @@ impl Graph {
         if ptr.is_null() {
             None
         } else {
-            Some(Executable::from_raw(ptr, targets.len()))
+            Some(Executable::from_raw(ptr, targets.len()).with_feed_types(feeds))
         }
     }
+}
+
+const FEED_MISMATCH: &str = "a feed's shape or data type does not match its tensor";
+
+pub(crate) fn feed_descriptions_match(feeds: &[FeedDescription<'_>]) -> bool {
+    feeds
+        .iter()
+        .all(|feed| feed_matches(feed.tensor, feed.shape, feed.data_type))
 }
 
 /// Safe owner for a compiled `MPSGraphExecutable`.
 pub struct Executable {
     ptr: *mut c_void,
     output_count: usize,
+    feed_types: Vec<(usize, Vec<usize>, u32)>,
 }
 
 unsafe impl Send for Executable {}
@@ -908,7 +1092,75 @@ impl Drop for Executable {
 
 impl Executable {
     pub(crate) const fn from_raw(ptr: *mut c_void, output_count: usize) -> Self {
-        Self { ptr, output_count }
+        Self {
+            ptr,
+            output_count,
+            feed_types: Vec::new(),
+        }
+    }
+
+    pub(crate) fn with_feed_types(mut self, feeds: &[FeedDescription<'_>]) -> Self {
+        self.feed_types = feeds
+            .iter()
+            .map(|feed| {
+                (
+                    feed.tensor.as_ptr() as usize,
+                    feed.shape.to_vec(),
+                    feed.data_type,
+                )
+            })
+            .collect();
+        self
+    }
+
+    pub(crate) fn check_inputs(&self, inputs: &[&TensorData]) -> Result<()> {
+        let feeds = self.feed_tensors();
+        if feeds.is_empty() {
+            return Ok(());
+        }
+        if inputs.len() != feeds.len() {
+            return Err(Error::InvalidShape(
+                "the executable needs one input per feed tensor",
+            ));
+        }
+        for (tensor, input) in feeds.iter().zip(inputs) {
+            let (shape, data_type) = (input.shape(), input.data_type());
+            let compiled = self
+                .feed_types
+                .iter()
+                .find(|(identity, ..)| *identity == tensor.as_ptr() as usize)
+                .is_none_or(|(_, expected, expected_type)| {
+                    *expected == shape && *expected_type == data_type
+                });
+            if !compiled || !feed_matches(tensor, &shape, data_type) {
+                return Err(Error::InvalidShape(FEED_MISMATCH));
+            }
+        }
+        Ok(())
+    }
+
+    pub(crate) fn check_results(&self, results: &[&TensorData]) -> Result<()> {
+        if results.len() != self.output_count {
+            return Err(Error::InvalidShape(
+                "preallocated results need one tensor per executable output",
+            ));
+        }
+        let targets = self.target_tensors();
+        if targets.len() != results.len() {
+            return Err(Error::InvalidShape(
+                "preallocated results need an executable compiled from a graph",
+            ));
+        }
+        for (target, result) in targets.iter().zip(results) {
+            let fits = static_dimensions(target).is_some_and(|shape| shape == result.shape())
+                && target.data_type() == result.data_type();
+            if !fits {
+                return Err(Error::InvalidShape(
+                    "preallocated results must match statically shaped outputs",
+                ));
+            }
+        }
+        Ok(())
     }
 
 /// Mirrors the `MPSGraph` framework constant `fn`.
@@ -929,6 +1181,7 @@ impl Executable {
         command_queue: &CommandQueue,
         inputs: &[&TensorData],
     ) -> Result<Vec<TensorData>> {
+        self.check_inputs(inputs)?;
         let input_data = inputs
             .iter()
             .map(|tensor_data| tensor_data.as_ptr())

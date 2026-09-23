@@ -600,7 +600,13 @@ public func mpsgraph_executable_run_with_descriptor(
     }
     let executable: MPSGraphExecutable = mpsgraph_borrow(executableHandle)
     let commandQueue: MTLCommandQueue = mpsgraph_borrow(commandQueueHandle)
-    let results = mpsgraph_tensor_data_array(resultHandles, count: resultCount)
+    var results: [MPSGraphTensorData]?
+    if resultCount > 0 {
+        guard let provided = mpsgraph_tensor_data_array(resultHandles, count: resultCount) else {
+            return nil
+        }
+        results = provided
+    }
     let executionDescriptor = executionDescriptorHandle.map { ptr in
         let descriptor: MPSGraphExecutableExecutionDescriptor = mpsgraph_borrow(ptr)
         return descriptor
@@ -628,7 +634,13 @@ public func mpsgraph_executable_run_async_with_descriptor(
     }
     let executable: MPSGraphExecutable = mpsgraph_borrow(executableHandle)
     let commandQueue: MTLCommandQueue = mpsgraph_borrow(commandQueueHandle)
-    let results = mpsgraph_tensor_data_array(resultHandles, count: resultCount)
+    var results: [MPSGraphTensorData]?
+    if resultCount > 0 {
+        guard let provided = mpsgraph_tensor_data_array(resultHandles, count: resultCount) else {
+            return nil
+        }
+        results = provided
+    }
     let executionDescriptor = executionDescriptorHandle.map { ptr in
         let descriptor: MPSGraphExecutableExecutionDescriptor = mpsgraph_borrow(ptr)
         return descriptor

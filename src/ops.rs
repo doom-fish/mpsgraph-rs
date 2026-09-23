@@ -1,8 +1,15 @@
 use crate::ffi;
-use crate::graph::Tensor;
+use crate::graph::{axes_in_range, axis_in_range, binary_operands_compatible, Tensor};
 use crate::types::collect_owned_tensors;
 use core::ffi::{c_char, c_void};
 use std::ffi::CString;
+
+fn axis_length(tensor: &Tensor, axis: isize) -> Option<usize> {
+    let shape = tensor.shape()?;
+    let rank = isize::try_from(shape.len()).ok()?;
+    let index = usize::try_from(if axis < 0 { axis + rank } else { axis }).ok()?;
+    usize::try_from(*shape.get(index)?).ok()
+}
 
 fn optional_cstring(name: Option<&str>) -> Option<CString> {
     name.and_then(|value| CString::new(value).ok())
@@ -204,6 +211,9 @@ impl crate::graph::Graph {
         secondary: &Tensor,
         name: Option<&str>,
     ) -> Option<Tensor> {
+        if !binary_operands_compatible(primary, secondary) {
+            return None;
+        }
         let name = optional_cstring(name);
         // SAFETY: all handles remain valid for the duration of the call.
         let ptr = unsafe {
@@ -292,6 +302,9 @@ impl crate::graph::Graph {
         axis: isize,
         name: Option<&str>,
     ) -> Option<Tensor> {
+        if !axis_in_range(source, axis) {
+            return None;
+        }
         let name = optional_cstring(name);
         // SAFETY: all handles remain valid for the duration of the call.
         let ptr = unsafe {
@@ -375,6 +388,9 @@ impl crate::graph::Graph {
         axis: isize,
         name: Option<&str>,
     ) -> Option<Tensor> {
+        if !axis_in_range(tensor, axis) {
+            return None;
+        }
         let name = optional_cstring(name);
         // SAFETY: all handles remain valid for the duration of the call.
         let ptr = unsafe {
@@ -398,6 +414,9 @@ impl crate::graph::Graph {
         axes: &[usize],
         name: Option<&str>,
     ) -> Option<Tensor> {
+        if !axes_in_range(tensor, axes) {
+            return None;
+        }
         let name = optional_cstring(name);
         // SAFETY: all handles remain valid for the duration of the call.
         let ptr = unsafe {
@@ -473,6 +492,15 @@ impl crate::graph::Graph {
         axis: isize,
         name: Option<&str>,
     ) -> Vec<Tensor> {
+        let total = split_sizes
+            .iter()
+            .try_fold(0_usize, |total, size| total.checked_add(*size));
+        if split_sizes.contains(&0)
+            || !axis_in_range(tensor, axis)
+            || axis_length(tensor, axis).is_some_and(|length| total != Some(length))
+        {
+            return Vec::new();
+        }
         let name = optional_cstring(name);
         // SAFETY: all handles remain valid for the duration of the call.
         let box_handle = unsafe {
@@ -497,6 +525,9 @@ impl crate::graph::Graph {
         axis: isize,
         name: Option<&str>,
     ) -> Vec<Tensor> {
+        if !axis_in_range(tensor, axis) {
+            return Vec::new();
+        }
         let name = optional_cstring(name);
         // SAFETY: all handles remain valid for the duration of the call.
         let box_handle = unsafe {
@@ -520,6 +551,12 @@ impl crate::graph::Graph {
         axis: isize,
         name: Option<&str>,
     ) -> Vec<Tensor> {
+        if num_splits == 0
+            || !axis_in_range(tensor, axis)
+            || axis_length(tensor, axis).is_some_and(|length| num_splits > length)
+        {
+            return Vec::new();
+        }
         let name = optional_cstring(name);
         // SAFETY: all handles remain valid for the duration of the call.
         let box_handle = unsafe {
