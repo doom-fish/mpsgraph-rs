@@ -1,8 +1,9 @@
 use apple_metal::MetalDevice;
 use apple_mpsgraph::{
     data_type, execution_stage, Error, ExecutableExecutionDescriptor, Feed, FeedDescription, Graph,
-    ReductionAxesOp, ReductionAxisOp, Tensor, TensorData,
+    ReductionAxesOp, ReductionAxisOp, ShapedType, Tensor, TensorData,
 };
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 fn device() -> MetalDevice {
@@ -281,4 +282,28 @@ fn async_runs_expose_results_only_after_completion() {
             .run_async_with_descriptor(&queue, &[&input], None, None)
             .expect("dropped run"),
     );
+}
+
+#[test]
+fn shaped_type_shape_reads_stay_consistent_while_another_thread_resizes() {
+    let short = [3_isize];
+    let long = [1_isize, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+    let shaped = ShapedType::new(Some(&short), data_type::FLOAT32).expect("shaped type");
+    let done = AtomicBool::new(false);
+    std::thread::scope(|scope| {
+        scope.spawn(|| {
+            for round in 0..20_000 {
+                let shape: &[isize] = if round % 2 == 0 { &long } else { &short };
+                shaped.set_shape(Some(shape)).expect("set shape");
+            }
+            done.store(true, Ordering::Release);
+        });
+        let mut reads = 0_u32;
+        while !done.load(Ordering::Acquire) || reads == 0 {
+            let shape = shaped.shape().expect("ranked shape");
+            assert!(shape == short || shape == long, "{shape:?}");
+            reads += 1;
+        }
+    });
+    assert_eq!(shaped.shape(), Some(short.to_vec()));
 }

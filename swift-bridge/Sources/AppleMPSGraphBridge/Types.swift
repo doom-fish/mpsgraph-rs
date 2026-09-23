@@ -31,21 +31,34 @@ public func mpsgraph_shaped_type_shape_len(_ handle: UnsafeMutableRawPointer?) -
     return shapedType.shape?.count ?? 0
 }
 
-@_cdecl("mpsgraph_shaped_type_copy_shape")
-public func mpsgraph_shaped_type_copy_shape(
-    _ handle: UnsafeMutableRawPointer?,
-    _ outShape: UnsafeMutablePointer<Int>?
-) {
-    guard let handle, let outShape else {
-        return
+func mpsgraph_copy_optional_shape(
+    _ shape: [NSNumber]?,
+    _ outShape: UnsafeMutablePointer<Int>?,
+    _ outLen: Int
+) -> Int {
+    guard let shape else {
+        return -1
     }
-    let shapedType: MPSGraphShapedType = mpsgraph_borrow(handle)
-    guard let shape = shapedType.shape else {
-        return
+    guard shape.count <= outLen, let outShape else {
+        return shape.count
     }
     for (index, value) in shape.enumerated() {
         outShape[index] = value.intValue
     }
+    return shape.count
+}
+
+@_cdecl("mpsgraph_shaped_type_copy_shape")
+public func mpsgraph_shaped_type_copy_shape(
+    _ handle: UnsafeMutableRawPointer?,
+    _ outShape: UnsafeMutablePointer<Int>?,
+    _ outLen: Int
+) -> Int {
+    guard let handle else {
+        return -1
+    }
+    let shapedType: MPSGraphShapedType = mpsgraph_borrow(handle)
+    return mpsgraph_copy_optional_shape(shapedType.shape, outShape, outLen)
 }
 
 @_cdecl("mpsgraph_shaped_type_data_type")
@@ -120,18 +133,14 @@ public func mpsgraph_tensor_shape_len(_ handle: UnsafeMutableRawPointer?) -> Int
 @_cdecl("mpsgraph_tensor_copy_shape")
 public func mpsgraph_tensor_copy_shape(
     _ handle: UnsafeMutableRawPointer?,
-    _ outShape: UnsafeMutablePointer<Int>?
-) {
-    guard let handle, let outShape else {
-        return
+    _ outShape: UnsafeMutablePointer<Int>?,
+    _ outLen: Int
+) -> Int {
+    guard let handle else {
+        return -1
     }
     let tensor: MPSGraphTensor = mpsgraph_borrow(handle)
-    guard let shape = tensor.shape else {
-        return
-    }
-    for (index, value) in shape.enumerated() {
-        outShape[index] = value.intValue
-    }
+    return mpsgraph_copy_optional_shape(tensor.shape, outShape, outLen)
 }
 
 @_cdecl("mpsgraph_tensor_data_type")

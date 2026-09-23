@@ -16,22 +16,19 @@ fn release_handle(ptr: &mut *mut c_void) {
 
 fn copy_optional_signed_shape(
     handle: *mut c_void,
-    has_shape: unsafe extern "C" fn(*mut c_void) -> bool,
-    shape_len: unsafe extern "C" fn(*mut c_void) -> usize,
-    copy_shape: unsafe extern "C" fn(*mut c_void, *mut isize),
+    copy_shape: unsafe extern "C" fn(*mut c_void, *mut isize, usize) -> isize,
 ) -> Option<Vec<isize>> {
-    // SAFETY: the function pointers belong to Swift shims that treat `handle` as immutable for the duration of the call.
-    if unsafe { !has_shape(handle) } {
-        return None;
+    let mut shape = Vec::new();
+    loop {
+        // SAFETY: `shape` has space for `shape.len()` elements, and the Swift shim writes only a shape that fits.
+        let count = unsafe { copy_shape(handle, shape.as_mut_ptr(), shape.len()) };
+        let count = usize::try_from(count).ok()?;
+        if count <= shape.len() {
+            shape.truncate(count);
+            return Some(shape);
+        }
+        shape.resize(count, 0);
     }
-    // SAFETY: see above.
-    let len = unsafe { shape_len(handle) };
-    let mut shape = vec![0_isize; len];
-    if len > 0 {
-        // SAFETY: `shape` has space for exactly `len` elements.
-        unsafe { copy_shape(handle, shape.as_mut_ptr()) };
-    }
-    Some(shape)
 }
 
 fn collect_tensor_array_box(handle: *mut c_void) -> Vec<Tensor> {
@@ -178,12 +175,7 @@ impl ShapedType {
     /// Return the optional tensor shape. `None` corresponds to an unranked shape.
     #[must_use]
     pub fn shape(&self) -> Option<Vec<isize>> {
-        copy_optional_signed_shape(
-            self.ptr,
-            ffi::mpsgraph_shaped_type_has_shape,
-            ffi::mpsgraph_shaped_type_shape_len,
-            ffi::mpsgraph_shaped_type_copy_shape,
-        )
+        copy_optional_signed_shape(self.ptr, ffi::mpsgraph_shaped_type_copy_shape)
     }
 
     /// Return the underlying `MPSDataType` raw value.
@@ -259,12 +251,7 @@ impl Tensor {
     /// Return the optional symbolic tensor shape.
     #[must_use]
     pub fn shape(&self) -> Option<Vec<isize>> {
-        copy_optional_signed_shape(
-            self.as_ptr(),
-            ffi::mpsgraph_tensor_has_shape,
-            ffi::mpsgraph_tensor_shape_len,
-            ffi::mpsgraph_tensor_copy_shape,
-        )
+        copy_optional_signed_shape(self.as_ptr(), ffi::mpsgraph_tensor_copy_shape)
     }
 
     /// Return the tensor's `MPSDataType` raw value.

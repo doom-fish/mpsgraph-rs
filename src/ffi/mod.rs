@@ -342,7 +342,11 @@ unsafe extern "C" {
 /// Calls the `MPSGraph` framework counterpart for `mpsgraph_shaped_type_shape_len`.
     pub fn mpsgraph_shaped_type_shape_len(handle: *mut c_void) -> usize;
 /// Calls the `MPSGraph` framework counterpart for `mpsgraph_shaped_type_copy_shape`.
-    pub fn mpsgraph_shaped_type_copy_shape(handle: *mut c_void, out_shape: *mut isize);
+    pub fn mpsgraph_shaped_type_copy_shape(
+        handle: *mut c_void,
+        out_shape: *mut isize,
+        out_len: usize,
+    ) -> isize;
 /// Calls the `MPSGraph` framework counterpart for `mpsgraph_shaped_type_data_type`.
     pub fn mpsgraph_shaped_type_data_type(handle: *mut c_void) -> u32;
 /// Calls the `MPSGraph` framework counterpart for `mpsgraph_shaped_type_set_shape`.
@@ -361,7 +365,11 @@ unsafe extern "C" {
 /// Calls the `MPSGraph` framework counterpart for `mpsgraph_tensor_shape_len`.
     pub fn mpsgraph_tensor_shape_len(handle: *mut c_void) -> usize;
 /// Calls the `MPSGraph` framework counterpart for `mpsgraph_tensor_copy_shape`.
-    pub fn mpsgraph_tensor_copy_shape(handle: *mut c_void, out_shape: *mut isize);
+    pub fn mpsgraph_tensor_copy_shape(
+        handle: *mut c_void,
+        out_shape: *mut isize,
+        out_len: usize,
+    ) -> isize;
 /// Calls the `MPSGraph` framework counterpart for `mpsgraph_tensor_data_type`.
     pub fn mpsgraph_tensor_data_type(handle: *mut c_void) -> u32;
 /// Calls the `MPSGraph` framework counterpart for `mpsgraph_tensor_operation`.
