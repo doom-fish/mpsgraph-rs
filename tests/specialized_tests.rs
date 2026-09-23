@@ -9,7 +9,8 @@ use apple_mpsgraph::{
     DepthwiseConvolution2DDescriptor, DepthwiseConvolution2DDescriptorInfo,
     DepthwiseConvolution3DDescriptor, DepthwiseConvolution3DDescriptorInfo, FftDescriptor,
     FftDescriptorInfo, Graph, ImToColDescriptor, ImToColDescriptorInfo, Pooling4DDescriptor,
-    Pooling4DDescriptorInfo, ShapedType, StencilDescriptor, StencilDescriptorInfo,
+    Pooling4DDescriptorInfo, ShapedType, StencilDescriptor, StencilDescriptorInfo, Tensor,
+    TensorData,
 };
 use std::process::Command;
 use std::sync::OnceLock;
@@ -48,12 +49,31 @@ fn i32_bytes(values: &[i32]) -> Vec<u8> {
         .collect::<Vec<_>>()
 }
 
-fn read_i32(data: &apple_mpsgraph::TensorData) -> Vec<i32> {
+fn read_i32(data: &TensorData) -> Vec<i32> {
     let bytes = data.read_bytes().expect("read bytes");
     bytes
         .chunks_exact(core::mem::size_of::<i32>())
         .map(|chunk| i32::from_ne_bytes(chunk.try_into().expect("i32 chunk")))
         .collect()
+}
+
+fn read_f32_values(data: &TensorData) -> Vec<f32> {
+    data.read_bytes()
+        .expect("read bytes")
+        .chunks_exact(core::mem::size_of::<f32>())
+        .map(|chunk| f32::from_ne_bytes(chunk.try_into().expect("f32 chunk")))
+        .collect()
+}
+
+fn assert_close(name: &str, actual: &[f32], expected: &[f32]) {
+    assert!(
+        actual.len() == expected.len()
+            && actual
+                .iter()
+                .zip(expected)
+                .all(|(actual, expected)| (actual - expected).abs() < 1e-4),
+        "{name}: got {actual:?}, expected {expected:?}"
+    );
 }
 
 fn assert_availability<T>(name: &str, value: Option<T>, available: bool) -> Option<T> {
@@ -154,7 +174,7 @@ fn specialized_constants_types_and_descriptors_round_trip() {
 }
 
 #[test]
-fn specialized_ops_smoke_build_all_categories() {
+fn specialized_ops_compute_expected_values() {
     let graph = Graph::new().expect("graph");
 
     let vector = graph
@@ -167,6 +187,12 @@ fn specialized_ops_smoke_build_all_categories() {
     let weights4d = graph
         .constant_f32_slice(&[1.0], &[1, 1, 1, 1])
         .expect("weights4d");
+    let window = graph
+        .constant_f32_slice(&[1.0, 5.0, 3.0, 2.0], &[1, 1, 2, 2])
+        .expect("window");
+    let image = graph
+        .constant_f32_slice(&[1.0, 5.0, 3.0, 2.0], &[1, 2, 2, 1])
+        .expect("image");
     let source5d = graph
         .constant_f32_slice(&[1.0], &[1, 1, 1, 1, 1])
         .expect("source5d");
@@ -213,147 +239,125 @@ fn specialized_ops_smoke_build_all_categories() {
         .constant_bytes(&i32_bytes(&[1, 0]), &[2], data_type::INT32)
         .expect("sparse index1");
 
+    let mut floats: Vec<(&str, Tensor, Vec<f32>)> = Vec::new();
+    let mut bytes: Vec<(&str, Tensor, Vec<u8>)> = Vec::new();
+
     let conv2d_descriptor = Convolution2DDescriptor::new(Convolution2DDescriptorInfo::default())
         .expect("conv2d descriptor");
-    let conv3d_descriptor = assert_availability(
-        "convolution3d descriptor",
-        Convolution3DDescriptor::new(Convolution3DDescriptorInfo::default()),
-        macos_version_at_least(13, 2),
-    );
+    floats.push((
+        "convolution transpose2d",
+        graph
+            .convolution_transpose2d(
+                &source4d,
+                &weights4d,
+                &[1, 1, 1, 1],
+                &conv2d_descriptor,
+                None,
+            )
+            .expect("convolution transpose2d"),
+        vec![1.0],
+    ));
     let depthwise2d_descriptor =
         DepthwiseConvolution2DDescriptor::new(DepthwiseConvolution2DDescriptorInfo::default())
             .expect("depthwise2d descriptor");
-    let depthwise3d_descriptor = assert_availability(
-        "depthwise3d descriptor",
-        DepthwiseConvolution3DDescriptor::new(DepthwiseConvolution3DDescriptorInfo::default()),
-        macos_version_at_least(12, 0),
-    );
-    let fft_descriptor = assert_availability(
-        "fft descriptor",
-        FftDescriptor::new(FftDescriptorInfo::default()),
-        macos_version_at_least(14, 0),
-    );
-    let im_to_col_descriptor = assert_availability(
-        "im2col descriptor",
-        ImToColDescriptor::new(ImToColDescriptorInfo::default()),
-        macos_version_at_least(14, 0),
-    );
-    let pooling_descriptor = assert_availability(
-        "pooling4d descriptor",
-        Pooling4DDescriptor::new(Pooling4DDescriptorInfo::default()),
-        macos_version_at_least(12, 0),
-    );
-    let pooling_indices_descriptor = assert_availability(
-        "pooling4d indices descriptor",
-        Pooling4DDescriptor::new(Pooling4DDescriptorInfo {
-            return_indices_mode: pooling_return_indices_mode::GLOBAL_FLATTEN_4D,
-            ..Default::default()
-        }),
-        macos_version_at_least(12, 2),
-    );
-    let sparse_descriptor = assert_availability(
-        "sparse descriptor",
-        CreateSparseDescriptor::new(sparse_storage_type::COO, data_type::FLOAT32),
-        macos_version_at_least(12, 0),
-    );
-    let stencil_descriptor = assert_availability(
-        "stencil descriptor",
-        StencilDescriptor::new(StencilDescriptorInfo::default()),
-        macos_version_at_least(12, 0),
-    );
-
-    assert!(graph
-        .convolution_transpose2d(
-            &source4d,
-            &weights4d,
-            &[1, 1, 1, 1],
-            &conv2d_descriptor,
-            Some("conv_transpose2d"),
-        )
-        .is_some());
-    assert_availability(
-        "cumulative sum",
-        graph.cumulative_sum(&vector, 0, false, false, Some("cumulative_sum")),
-        macos_version_at_least(13, 0),
-    );
-    assert!(graph
-        .depthwise_convolution2d(
-            &source4d,
-            &weights4d,
-            &depthwise2d_descriptor,
-            Some("depthwise2d"),
-        )
-        .is_some());
-    assert!(graph.band_part(&matrix, 0, 0, Some("band_part")).is_some());
-    assert!(graph
-        .softmax_cross_entropy(
-            &logits,
-            &labels,
-            1,
-            loss_reduction_type::SUM,
-            Some("softmax_cross_entropy"),
-        )
-        .is_some());
-    assert_availability(
-        "matrix inverse",
-        graph.matrix_inverse(&matrix, Some("inverse")),
-        macos_version_at_least(13, 0),
-    );
+    floats.push((
+        "depthwise convolution2d",
+        graph
+            .depthwise_convolution2d(&source4d, &weights4d, &depthwise2d_descriptor, None)
+            .expect("depthwise convolution2d"),
+        vec![1.0],
+    ));
+    floats.push((
+        "band part",
+        graph.band_part(&matrix, 0, 0, None).expect("band part"),
+        vec![4.0],
+    ));
+    floats.push((
+        "softmax cross entropy",
+        graph
+            .softmax_cross_entropy(&logits, &labels, 1, loss_reduction_type::SUM, None)
+            .expect("softmax cross entropy"),
+        vec![0.474_077],
+    ));
+    floats.push((
+        "stochastic gradient descent",
+        graph
+            .stochastic_gradient_descent(&learning_rate, &vector, &vector, None)
+            .expect("stochastic gradient descent"),
+        vec![2.7, 0.9, 1.8],
+    ));
+    floats.push((
+        "one hot",
+        graph
+            .one_hot(&indices_1d, 3, data_type::FLOAT32, None)
+            .expect("one hot"),
+        vec![1.0, 0.0, 0.0, 0.0, 0.0, 1.0],
+    ));
 
     let variable = graph
         .variable_f32_slice(&[5.0, 7.0], &[2], Some("variable"))
         .expect("variable");
-    assert!(graph
-        .read_variable(&variable, Some("read_variable"))
-        .is_some());
-    assert!(graph
-        .assign_variable(&variable, &updates, Some("assign_variable"))
-        .is_some());
-    assert!(graph
-        .one_hot(&indices_1d, 3, data_type::FLOAT32, Some("one_hot"))
-        .is_some());
-    assert!(graph
-        .stochastic_gradient_descent(&learning_rate, &vector, &vector, Some("sgd"))
-        .is_some());
+    let assign = graph
+        .assign_variable(&variable, &updates, None)
+        .expect("assign variable");
+    let assigned = graph
+        .control_dependency(
+            &[&assign],
+            || vec![graph.read_variable(&variable, None).expect("read variable")],
+            None,
+        )
+        .expect("control dependency")
+        .into_iter()
+        .next()
+        .expect("read after assign");
+    floats.push(("assign variable", assigned, vec![10.0, 20.0]));
 
-    let quantized = assert_availability(
-        "quantize",
-        graph.quantize(&vector, 1.0, 0.0, data_type::INT8, Some("quantize")),
-        macos_version_at_least(13, 1),
+    let mut expect_floats = |name: &'static str, tensor, available, expected: Vec<f32>| {
+        if let Some(tensor) = assert_availability(name, tensor, available) {
+            floats.push((name, tensor, expected));
+        }
+    };
+    expect_floats(
+        "cumulative sum",
+        graph.cumulative_sum(&vector, 0, false, false, None),
+        macos_version_at_least(13, 0),
+        vec![3.0, 4.0, 6.0],
     );
-    if let Some(tensor) = quantized.as_ref() {
-        assert!(graph
-            .dequantize(tensor, 1.0, 0.0, data_type::FLOAT32, Some("dequantize"))
-            .is_some());
-    }
-
-    assert_availability(
+    expect_floats(
+        "matrix inverse",
+        graph.matrix_inverse(&matrix, None),
+        macos_version_at_least(13, 0),
+        vec![0.25],
+    );
+    expect_floats(
         "resize",
         graph.resize(
-            &source4d,
+            &image,
             &[1, 1],
             resize_mode::BILINEAR,
             true,
             false,
             tensor_named_data_layout::NHWC,
-            Some("resize"),
+            None,
         ),
         macos_version_at_least(13, 0),
+        vec![2.75],
     );
-    assert_availability(
+    expect_floats(
         "resize nearest",
         graph.resize_nearest(
-            &source4d,
+            &image,
             &size_tensor,
             resize_nearest_rounding_mode::ROUND_PREFER_CEIL,
             true,
             false,
             tensor_named_data_layout::NHWC,
-            Some("resize_nearest"),
+            None,
         ),
         macos_version_at_least(13, 0),
+        vec![2.0],
     );
-    assert_availability(
+    expect_floats(
         "sample grid",
         graph.sample_grid(
             &source4d,
@@ -365,12 +369,12 @@ fn specialized_ops_smoke_build_all_categories() {
             padding_mode::ZERO,
             resize_mode::NEAREST,
             0.0,
-            Some("sample_grid"),
+            None,
         ),
         macos_version_at_least(13, 1),
+        vec![1.0],
     );
-
-    assert_availability(
+    expect_floats(
         "scatter nd",
         graph.scatter_nd(
             &updates,
@@ -378,46 +382,196 @@ fn specialized_ops_smoke_build_all_categories() {
             &[2],
             0,
             scatter_mode::ADD,
-            Some("scatter_nd"),
+            None,
         ),
         macos_version_at_least(12, 0),
+        vec![10.0, 20.0],
     );
-    assert_availability(
+    expect_floats(
         "scatter",
-        graph.scatter(
-            &updates,
-            &indices_1d,
-            &[3],
-            0,
-            scatter_mode::SET,
-            Some("scatter"),
-        ),
+        graph.scatter(&updates, &indices_1d, &[3], 0, scatter_mode::SET, None),
         macos_version_at_least(12, 0),
+        vec![10.0, 0.0, 20.0],
     );
-    assert_availability(
+    expect_floats(
         "scatter along axis",
-        graph.scatter_along_axis(
-            0,
-            &updates,
-            &indices_1d,
-            &[3],
-            scatter_mode::ADD,
-            Some("scatter_along_axis"),
-        ),
+        graph.scatter_along_axis(0, &updates, &indices_1d, &[3], scatter_mode::ADD, None),
         macos_version_at_least(12, 3),
+        vec![10.0, 0.0, 20.0],
+    );
+    expect_floats(
+        "sort",
+        graph.sort(&vector, 0, false, None),
+        macos_version_at_least(13, 0),
+        vec![1.0, 2.0, 3.0],
+    );
+    expect_floats(
+        "top k gradient",
+        graph.top_k_gradient(&updates, &vector, 2, None),
+        macos_version_at_least(14, 0),
+        vec![10.0, 0.0, 20.0],
+    );
+    if let Some(descriptor) = assert_availability(
+        "convolution3d descriptor",
+        Convolution3DDescriptor::new(Convolution3DDescriptorInfo::default()),
+        macos_version_at_least(13, 2),
+    ) {
+        expect_floats(
+            "convolution3d",
+            graph.convolution3d(&source5d, &weights5d, &descriptor, None),
+            true,
+            vec![1.0],
+        );
+    }
+    if let Some(descriptor) = assert_availability(
+        "depthwise3d descriptor",
+        DepthwiseConvolution3DDescriptor::new(DepthwiseConvolution3DDescriptorInfo::default()),
+        macos_version_at_least(12, 0),
+    ) {
+        expect_floats(
+            "depthwise convolution3d",
+            graph.depthwise_convolution3d(&source5d, &weights4d, &descriptor, None),
+            true,
+            vec![1.0],
+        );
+    }
+    if let Some(descriptor) = assert_availability(
+        "fft descriptor",
+        FftDescriptor::new(FftDescriptorInfo::default()),
+        macos_version_at_least(14, 0),
+    ) {
+        expect_floats(
+            "fast fourier transform",
+            graph.fast_fourier_transform(&vector, &[0], &descriptor, None),
+            true,
+            vec![6.0, 0.0, 1.5, 0.866_025, 1.5, -0.866_025],
+        );
+    }
+    if let Some(descriptor) = assert_availability(
+        "unitary fft descriptor",
+        FftDescriptor::new(FftDescriptorInfo {
+            scaling_mode: fft_scaling_mode::UNITARY,
+            ..Default::default()
+        }),
+        macos_version_at_least(14, 0),
+    ) {
+        expect_floats(
+            "unitary fast fourier transform",
+            graph.fast_fourier_transform(&vector, &[0], &descriptor, None),
+            true,
+            vec![3.464_102, 0.0, 0.866_025, 0.5, 0.866_025, -0.5],
+        );
+    }
+    if let Some(descriptor) = assert_availability(
+        "im2col descriptor",
+        ImToColDescriptor::new(ImToColDescriptorInfo {
+            kernel_width: 2,
+            kernel_height: 2,
+            ..Default::default()
+        }),
+        macos_version_at_least(14, 0),
+    ) {
+        expect_floats(
+            "im2col",
+            graph.im_to_col(&image, &descriptor, None),
+            true,
+            vec![1.0, 5.0, 3.0, 2.0],
+        );
+    }
+    if let Some(descriptor) = assert_availability(
+        "pooling4d descriptor",
+        Pooling4DDescriptor::new(Pooling4DDescriptorInfo {
+            kernel_sizes: [1, 1, 2, 2],
+            strides: [1, 1, 2, 2],
+            ..Default::default()
+        }),
+        macos_version_at_least(12, 0),
+    ) {
+        expect_floats(
+            "max pooling4d",
+            graph.max_pooling4d(&window, &descriptor, None),
+            true,
+            vec![5.0],
+        );
+    }
+    if let Some(descriptor) = assert_availability(
+        "sparse descriptor",
+        CreateSparseDescriptor::new(sparse_storage_type::COO, data_type::FLOAT32),
+        macos_version_at_least(12, 0),
+    ) {
+        expect_floats(
+            "sparse tensor",
+            graph.sparse_tensor_with_descriptor(
+                &descriptor,
+                &[&sparse_values, &sparse_index0, &sparse_index1],
+                &[2, 2],
+                None,
+            ),
+            true,
+            vec![0.0, 1.0, 2.0, 0.0],
+        );
+    }
+    if let Some(descriptor) = assert_availability(
+        "stencil descriptor",
+        StencilDescriptor::new(StencilDescriptorInfo::default()),
+        macos_version_at_least(12, 0),
+    ) {
+        expect_floats(
+            "stencil",
+            graph.stencil(&source4d, &weights4d, &descriptor, None),
+            true,
+            vec![1.0],
+        );
+    }
+
+    if let Some(quantized) = assert_availability(
+        "quantize",
+        graph.quantize(&vector, 1.0, 0.0, data_type::INT8, None),
+        macos_version_at_least(13, 1),
+    ) {
+        expect_floats(
+            "dequantize",
+            graph.dequantize(&quantized, 1.0, 0.0, data_type::FLOAT32, None),
+            true,
+            vec![3.0, 1.0, 2.0],
+        );
+        bytes.push(("quantize", quantized, vec![3, 1, 2]));
+    }
+    if let Some(descriptor) = assert_availability(
+        "pooling4d indices descriptor",
+        Pooling4DDescriptor::new(Pooling4DDescriptorInfo {
+            kernel_sizes: [1, 1, 2, 2],
+            strides: [1, 1, 2, 2],
+            return_indices_mode: pooling_return_indices_mode::GLOBAL_FLATTEN_4D,
+            ..Default::default()
+        }),
+        macos_version_at_least(12, 2),
+    ) {
+        let (values, indices) = graph
+            .max_pooling4d_return_indices(&window, &descriptor, None)
+            .expect("max pooling4d indices");
+        floats.push(("max pooling4d values", values, vec![5.0]));
+        bytes.push(("max pooling4d indices", indices, i32_bytes(&[1])));
+    }
+    let mut expect_bytes = |name: &'static str, tensor, available, expected: Vec<u8>| {
+        if let Some(tensor) = assert_availability(name, tensor, available) {
+            bytes.push((name, tensor, expected));
+        }
+    };
+    expect_bytes(
+        "arg sort",
+        graph.arg_sort(&vector, 0, false, None),
+        macos_version_at_least(13, 0),
+        i32_bytes(&[1, 2, 0]),
+    );
+    expect_bytes(
+        "non zero indices",
+        graph.non_zero_indices(&vector, None),
+        macos_version_at_least(14, 0),
+        i32_bytes(&[0, 1, 2]),
     );
 
-    assert_availability(
-        "sort",
-        graph.sort(&vector, 0, false, Some("sort")),
-        macos_version_at_least(13, 0),
-    );
-    assert_availability(
-        "arg sort",
-        graph.arg_sort(&vector, 0, false, Some("arg_sort")),
-        macos_version_at_least(13, 0),
-    );
-    assert_availability(
+    if let Some(selected) = assert_availability(
         "non maximum suppression",
         graph.non_maximum_suppression(
             &boxes,
@@ -426,66 +580,27 @@ fn specialized_ops_smoke_build_all_categories() {
             0.1,
             false,
             non_maximum_suppression_coordinate_mode::CORNERS_HEIGHT_FIRST,
-            Some("nms"),
+            None,
         ),
         macos_version_at_least(14, 0),
-    );
-    assert_availability(
-        "non zero indices",
-        graph.non_zero_indices(&vector, Some("non_zero_indices")),
-        macos_version_at_least(14, 0),
-    );
+    ) {
+        assert_eq!(selected.data_type(), data_type::INT32);
+        assert_eq!(selected.shape(), Some(vec![1, 1, 2]));
+    }
 
-    if let Some(descriptor) = conv3d_descriptor.as_ref() {
-        assert!(graph
-            .convolution3d(&source5d, &weights5d, descriptor, Some("convolution3d"))
-            .is_some());
+    let targets = floats
+        .iter()
+        .map(|(_, tensor, _)| tensor)
+        .chain(bytes.iter().map(|(_, tensor, _)| tensor))
+        .collect::<Vec<_>>();
+    let results = graph.run(&[], &targets).expect("run specialized ops");
+    assert_eq!(results.len(), targets.len());
+    for ((name, _, expected), data) in floats.iter().zip(&results) {
+        assert_close(name, &read_f32_values(data), expected);
     }
-    if let Some(descriptor) = depthwise3d_descriptor.as_ref() {
-        assert!(graph
-            .depthwise_convolution3d(&source5d, &weights4d, descriptor, Some("depthwise3d"))
-            .is_some());
+    for ((name, _, expected), data) in bytes.iter().zip(&results[floats.len()..]) {
+        assert_eq!(&data.read_bytes().expect("read bytes"), expected, "{name}");
     }
-    if let Some(descriptor) = fft_descriptor.as_ref() {
-        assert!(graph
-            .fast_fourier_transform(&vector, &[0], descriptor, Some("fft"))
-            .is_some());
-    }
-    if let Some(descriptor) = im_to_col_descriptor.as_ref() {
-        assert!(graph
-            .im_to_col(&source4d, descriptor, Some("im_to_col"))
-            .is_some());
-    }
-    if let Some(descriptor) = pooling_descriptor.as_ref() {
-        assert!(graph
-            .max_pooling4d(&source4d, descriptor, Some("max_pooling4d"))
-            .is_some());
-    }
-    if let Some(descriptor) = pooling_indices_descriptor.as_ref() {
-        assert!(graph
-            .max_pooling4d_return_indices(&source4d, descriptor, Some("max_pooling4d_indices"))
-            .is_some());
-    }
-    if let Some(descriptor) = sparse_descriptor.as_ref() {
-        assert!(graph
-            .sparse_tensor_with_descriptor(
-                descriptor,
-                &[&sparse_values, &sparse_index0, &sparse_index1],
-                &[2, 2],
-                Some("sparse_tensor"),
-            )
-            .is_some());
-    }
-    if let Some(descriptor) = stencil_descriptor.as_ref() {
-        assert!(graph
-            .stencil(&source4d, &weights4d, descriptor, Some("stencil"))
-            .is_some());
-    }
-    assert_availability(
-        "topk gradient",
-        graph.top_k_gradient(&vector, &vector, 2, Some("topk_gradient")),
-        macos_version_at_least(14, 0),
-    );
 }
 
 #[test]

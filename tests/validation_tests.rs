@@ -61,7 +61,25 @@ fn shape_and_axis_mistakes_are_refused_before_mpsgraph() {
     );
     assert!(graph.softmax(&x, 7, None).is_none());
     assert!(graph.softmax(&x, -3, None).is_none());
-    assert!(graph.softmax(&x, -1, None).is_some());
+    let softmax = graph
+        .softmax(&x, -1, None)
+        .expect("softmax over the last axis");
+    let input = TensorData::from_f32_slice(&device(), &values(6), &[2, 3]).expect("input");
+    let probabilities = graph
+        .run(&[Feed::new(&x, &input)], &[&softmax])
+        .expect("run softmax")[0]
+        .read_f32()
+        .expect("read softmax");
+    let expected = [
+        0.090_031, 0.244_728, 0.665_241, 0.090_031, 0.244_728, 0.665_241,
+    ];
+    assert!(
+        probabilities
+            .iter()
+            .zip(expected)
+            .all(|(actual, expected)| (actual - expected).abs() < 1e-5),
+        "{probabilities:?}"
+    );
     assert!(graph.broadcast(&x, &[4, 5], None).is_none());
     assert!(graph.broadcast(&x, &[3], None).is_none());
     assert_eq!(

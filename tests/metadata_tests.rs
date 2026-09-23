@@ -1,8 +1,10 @@
+#![allow(clippy::too_many_lines)]
+
 use apple_metal::MetalDevice;
 use apple_mpsgraph::{
     data_type, deployment_platform, graph_options, optimization, CompilationDescriptor,
     ExecutableExecutionDescriptor, ExecutableSerializationDescriptor, FeedDescription, Graph,
-    GraphDevice, ShapedType,
+    GraphDevice, ShapedType, TensorData,
 };
 
 #[test]
@@ -23,10 +25,17 @@ fn graph_metadata_and_descriptors_round_trip() {
     let input = graph
         .placeholder(Some(&[2, 2]), data_type::FLOAT32, Some("input"))
         .expect("placeholder");
-    assert_eq!(graph.placeholder_tensors().len(), 1);
+    let placeholders = graph.placeholder_tensors();
+    assert_eq!(placeholders.len(), 1);
+    assert_eq!(placeholders[0].as_ptr(), input.as_ptr());
     assert_eq!(input.shape(), Some(vec![2, 2]));
     assert_eq!(input.data_type(), data_type::FLOAT32);
-    assert!(input.operation().is_some());
+    let operation = input.operation().expect("placeholder operation");
+    assert_eq!(
+        input.operation().expect("placeholder operation").as_ptr(),
+        operation.as_ptr()
+    );
+    assert!(operation.as_variable().is_none());
 
     let shaped = ShapedType::new(Some(&[2, 2]), data_type::FLOAT32).expect("shaped type");
     assert_eq!(shaped.shape(), Some(vec![2, 2]));
@@ -62,8 +71,12 @@ fn graph_metadata_and_descriptors_round_trip() {
             Some(&compile_desc),
         )
         .expect("compile with descriptor");
-    assert_eq!(executable.feed_tensors().len(), 1);
-    assert_eq!(executable.target_tensors().len(), 1);
+    let feed_tensors = executable.feed_tensors();
+    assert_eq!(feed_tensors.len(), 1);
+    assert_eq!(feed_tensors[0].as_ptr(), input.as_ptr());
+    let target_tensors = executable.target_tensors();
+    assert_eq!(target_tensors.len(), 1);
+    assert_eq!(target_tensors[0].as_ptr(), output.as_ptr());
 
     let input_type = ShapedType::new(Some(&[2, 2]), data_type::FLOAT32).expect("input type");
     let output_types = executable
@@ -71,12 +84,24 @@ fn graph_metadata_and_descriptors_round_trip() {
         .expect("output types");
     assert_eq!(output_types.len(), 1);
     assert_eq!(output_types[0].shape(), Some(vec![2, 2]));
+    assert_eq!(output_types[0].data_type(), data_type::FLOAT32);
 
     let exec_desc = ExecutableExecutionDescriptor::new().expect("exec desc");
     exec_desc
         .set_wait_until_completed(true)
         .expect("set exec wait");
     assert!(exec_desc.wait_until_completed());
+    let queue = metal.new_command_queue().expect("command queue");
+    let data = TensorData::from_f32_slice(&metal, &[1.0, -2.0, 3.0, 0.5], &[2, 2]).expect("data");
+    let squared = executable
+        .run_with_descriptor(&queue, &[&data], None, Some(&exec_desc))
+        .expect("run executable");
+    assert_eq!(squared.len(), 1);
+    assert_eq!(squared[0].shape(), vec![2, 2]);
+    assert_eq!(
+        squared[0].read_f32().expect("read squared"),
+        vec![1.0, 4.0, 9.0, 0.25]
+    );
 
     let serialization = ExecutableSerializationDescriptor::new().expect("serialization desc");
     serialization.set_append(true).expect("set append");
