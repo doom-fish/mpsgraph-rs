@@ -1,14 +1,14 @@
 # mpsgraph-rs coverage audit v2 (vs MacOSX26.2.sdk)
 
 SDK_PUBLIC_SYMBOLS: 90
-VERIFIED: 90
-GAPS: 0
+VERIFIED: 89
+GAPS: 1
 EXEMPT: 0
-COVERAGE_PCT: 100.00
+COVERAGE_PCT: 98.89
 
 Scope: All 90 Objective-C interfaces/categories and enum types from `MetalPerformanceShadersGraph.framework/Headers` (macOS 26.2), enumerated via @interface/@protocol patterns and typedef enum/NS_ENUM/NS_OPTIONS. All macOS-available top-level symbols are wrapped in v0.2.3 and later.
 
-What the numbers measure: a symbol counts as VERIFIED when the crate has at least one safe wrapper for that interface, category or enum. Methods are not counted, and most categories are only partly wrapped: for example `MPSGraph(MPSGraphMatrixMultiplicationOps)` lacks scaled dot-product attention and `HammingDistance`, and `MPSGraph(MPSGraphQuantizationOps)` has 2 of its 10 methods. See `COVERAGE.md` for per-area status. The same 90 symbols appear in the macOS 26.5 SDK used to build 0.3.0.
+What the numbers measure: a symbol counts as VERIFIED when the crate has at least one safe wrapper for that interface, category or enum. Methods are not counted, and most categories are only partly wrapped: for example `MPSGraph(MPSGraphMatrixMultiplicationOps)` lacks scaled dot-product attention and `HammingDistance`, and `MPSGraph(MPSGraphQuantizationOps)` has 2 of its 10 methods. `MPSGraph(MPSGraphNonMaximumSuppressionOps)` counts as a gap: its only method is wrapped as `unsafe`, because running it aborts on the Apple-silicon GPU runtime. See `COVERAGE.md` for per-area status. The same 90 symbols appear in the macOS 26.5 SDK used to build 0.3.0.
 
 ## 🟢 VERIFIED
 | Symbol | Kind | Header | Wrapped by |
@@ -67,7 +67,7 @@ What the numbers measure: a symbol counts as VERIFIED when the crate has at leas
 | `MPSGraph(MPSGraphArithmeticOps)` | category | `MPSGraphArithmeticOps.h` | Graph::{addition, subtraction, multiplication, division} plus unary/binary |
 | `MPSGraph(MPSGraphGradientOps)` | category | `MPSGraphAutomaticDifferentiation.h` | Graph::{relu_gradient, sigmoid_gradient, softmax_gradient, leaky_relu_gradient} |
 | `MPSGraph(CallOp)` | category | `MPSGraphCallOps.h` | Graph::call in src/call.rs plus CompilationDescriptor::set_callable |
-| `MPSGraph(MPSGraphControlFlowOps)` | category | `MPSGraphControlFlowOps.h` | Graph::{control_dependency, if_then, if_then_else, while_loop, for_loop} |
+| `MPSGraph(MPSGraphControlFlowOps)` | category | `MPSGraphControlFlowOps.h` | Graph::{control_dependency, if_then_else, while_loop, for_loop} |
 | `MPSGraph(MPSGraphConvolutionOps)` | category | `MPSGraphConvolutionOps.h` | Graph::convolution2d in src/graph.rs |
 | `MPSGraph(MPSGraphConvolutionTransposeOps)` | category | `MPSGraphConvolutionTransposeOps.h` | Graph::convolution_transpose2d |
 | `MPSGraph(MPSGraphCumulativeOps)` | category | `MPSGraphCumulativeOps.h` | Graph::cumulative_sum in src/specialized.rs |
@@ -82,7 +82,6 @@ What the numbers measure: a symbol counts as VERIFIED when the crate has at leas
 | `MPSGraph(MPSGraphMatrixInverseOps)` | category | `MPSGraphMatrixInverseOps.h` | Graph::matrix_inverse |
 | `MPSGraph(MPSGraphMatrixMultiplicationOps)` | category | `MPSGraphMatrixMultiplicationOps.h` | Graph::matrix_multiplication (scaled dot-product attention and HammingDistance are not wrapped) |
 | `MPSGraph(MemoryOps)` | category | `MPSGraphMemoryOps.h` | Graph::{placeholder, constant_*, read_variable, assign_variable} |
-| `MPSGraph(MPSGraphNonMaximumSuppressionOps)` | category | `MPSGraphNonMaximumSuppressionOps.h` | Graph::non_maximum_suppression |
 | `MPSGraph(NonZeroOps)` | category | `MPSGraphNonZeroOps.h` | Graph::non_zero_indices |
 | `MPSGraph(MPSGraphNormalizationOps)` | category | `MPSGraphNormalizationOps.h` | Graph::normalize |
 | `MPSGraph(MPSGraphOneHotOps)` | category | `MPSGraphOneHotOps.h` | Graph::one_hot |
@@ -107,7 +106,7 @@ What the numbers measure: a symbol counts as VERIFIED when the crate has at leas
 ## 🔴 GAPS
 | Symbol | Kind | Header | Notes |
 | --- | --- | --- | --- |
-| _(none)_ | - | - | Every audited top-level symbol has at least one wrapper; method-level gaps are listed in `COVERAGE.md`. |
+| `MPSGraph(MPSGraphNonMaximumSuppressionOps)` | category | `MPSGraphNonMaximumSuppressionOps.h` | `Graph::non_maximum_suppression` is `unsafe`: running it aborts with "Unsupported MPS operation" on the Apple-silicon GPU runtime. Method-level gaps are listed in `COVERAGE.md`. |
 
 ## ⏭️ EXEMPT
 | Symbol | Kind | Header | Reason | SDK attribute |

@@ -78,16 +78,38 @@ methods. See [`COVERAGE.md`](COVERAGE.md) for the per-area status.
 - `TensorData::from_bytes` and `from_buffer` check the byte count against the shape and
   data type with overflow-checked arithmetic, and reads never write past their destination.
   Sub-byte types pack across the whole array.
-- Shapes are checked for overflow before they reach the Swift bridge. Arithmetic, matrix
-  multiplication, reductions, softmax, reshape, transpose, slice, broadcast and split check
-  their axes and static shapes, and graph and executable runs check feeds and preallocated
-  results, returning `None` or `Err` instead of letting `MPSGraph` abort the process. Other op
-  families, and tensors with dynamic dimensions, are passed to `MPSGraph` unchecked; invalid
-  shapes there still abort the process.
+- Shapes are checked for overflow before they reach the Swift bridge. Every graph builder
+  checks the preconditions `MPSGraph` documents or asserts on (ranks, axes, shape
+  compatibility and broadcasting, gather and scatter index types, `k` against the last
+  dimension, pad widths, stack and concat inputs, RNN weight, state and mask layouts,
+  convolution channels, groups and window sizes, supported data types and descriptor
+  values) and returns `Err` instead of letting `MPSGraph` abort the process. Dimensions that
+  are dynamic (-1) or unranked are checked as far as they are known; `MPSGraph` checks the
+  rest when the graph runs and aborts if they do not fit.
+- Each tensor and operation remembers the graph and control-flow block it was created in.
+  Using one in another graph, or outside the `if`, `while` or `for` block that created it,
+  returns `Error::ForeignTensor` or `Error::ForeignOperation`.
+- Control-flow blocks must agree: the then and else blocks of `if_then_else` return the
+  same number of tensors (at least one) with identical shapes and data types, the `while`
+  before block returns a rank-0 bool predicate and at least one tensor, and the `while`
+  after block and `for` body return tensors matching the loop's inputs. A block that breaks
+  these rules is replaced by placeholders of the expected types, so the graph stays valid,
+  and the builder returns an error. `MPSGraph` cannot build an `if` without an else block, so
+  there is no `if_then`.
+- Runs and compiles need a feed for every placeholder their targets depend on, including
+  placeholders captured inside control-flow blocks (`Error::MissingFeed`). A graph with a
+  `call` op cannot use `run` or `compile`; `compile_with_descriptor` needs a callable set
+  with `CompilationDescriptor::set_callable` whose compiled feed and output types match the
+  call (`Error::MissingCallable`).
+- `top_k_tensor`, `split_sizes_tensor`, `gather_along_axis_tensor`, `resize_nearest` and the
+  shape-tensor random builders are `unsafe`: `MPSGraph` aborts if the values of their tensor
+  parameters are out of range, and those values are known only when the graph runs.
+- `Graph`, `Executable`, `ShapedType` and the mutable descriptors are `Send` but not `Sync`,
+  because their builders and setters mutate the underlying objects.
 - An `AsyncRun` hands out its results only from `wait` or `wait_timeout`, after the GPU work
   has finished; dropping it blocks until then.
-- On the Apple-silicon GPU runtime used for testing, running a graph that contains
-  `non_maximum_suppression` aborts with "Unsupported MPS operation"; building it works.
+- `non_maximum_suppression` is `unsafe`: on the Apple-silicon GPU runtime used for testing,
+  running a graph that contains it aborts with "Unsupported MPS operation".
 
 ## Smoke examples
 
