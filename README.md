@@ -91,7 +91,8 @@ methods. See [`COVERAGE.md`](COVERAGE.md) for the per-area status.
   returns `Error::ForeignTensor` or `Error::ForeignOperation`.
 - Control-flow blocks must agree: the then and else blocks of `if_then_else` return the
   same number of tensors (at least one) with identical shapes and data types, the `while`
-  before block returns a rank-0 bool predicate and at least one tensor, and the `while`
+  before block returns a rank-0 bool predicate computed from its inputs (`MPSGraph` aborts
+  on constant predicates) and at least one tensor, and the `while`
   after block and `for` body return tensors matching the loop's inputs. A block that breaks
   these rules is replaced by placeholders of the expected types, so the graph stays valid,
   and the builder returns an error. `MPSGraph` cannot build an `if` without an else block, so

@@ -304,16 +304,19 @@ fn loop_blocks_must_keep_their_types() {
         ),
         Error::InvalidShape(_)
     );
+    let float_zero = scalar(&graph, 0.0, data_type::FLOAT32);
     refused!(
         graph.while_loop(
-            &[&zero],
+            &[&float_zero],
             |inputs| WhileBeforeResult {
-                predicate: scalar(&graph, 1.0, data_type::FLOAT32),
+                predicate: graph
+                    .unary_arithmetic(UnaryArithmeticOp::Identity, &inputs[0], None)
+                    .expect("float predicate"),
                 results: vec![graph
                     .unary_arithmetic(UnaryArithmeticOp::Identity, &inputs[0], None)
                     .expect("identity")],
             },
-            |arguments| vec![graph.addition(&arguments[0], &one, None).expect("add")],
+            |arguments| vec![graph.addition(&arguments[0], &arguments[0], None).expect("add")],
             None
         ),
         Error::InvalidShape(_)
@@ -321,8 +324,16 @@ fn loop_blocks_must_keep_their_types() {
     refused!(
         graph.while_loop(
             &[&zero],
-            |_| WhileBeforeResult {
-                predicate: constant(&graph, 1.0, &[2], data_type::BOOL),
+            |inputs| WhileBeforeResult {
+                predicate: graph
+                    .broadcast(
+                        &graph
+                            .binary_arithmetic(BinaryArithmeticOp::LessThan, &inputs[0], &three, None)
+                            .expect("less than"),
+                        &[2],
+                        None,
+                    )
+                    .expect("vector predicate"),
                 results: vec![scalar(&graph, 1.0, data_type::INT32)],
             },
             |arguments| vec![graph.addition(&arguments[0], &one, None).expect("add")],
@@ -343,6 +354,37 @@ fn loop_blocks_must_keep_their_types() {
             None
         ),
         Error::InvalidShape(_)
+    );
+    let outer_false = scalar(&graph, 0.0, data_type::BOOL);
+    refused!(
+        graph.while_loop(
+            &[&zero],
+            |inputs| WhileBeforeResult {
+                predicate: graph
+                    .unary_arithmetic(UnaryArithmeticOp::Identity, &outer_false, None)
+                    .expect("identity"),
+                results: vec![graph
+                    .unary_arithmetic(UnaryArithmeticOp::Identity, &inputs[0], None)
+                    .expect("identity")],
+            },
+            |arguments| vec![graph.addition(&arguments[0], &one, None).expect("add")],
+            None
+        ),
+        Error::InvalidArgument(_)
+    );
+    refused!(
+        graph.while_loop(
+            &[&zero],
+            |inputs| WhileBeforeResult {
+                predicate: scalar(&graph, 0.0, data_type::BOOL),
+                results: vec![graph
+                    .unary_arithmetic(UnaryArithmeticOp::Identity, &inputs[0], None)
+                    .expect("identity")],
+            },
+            |arguments| vec![graph.addition(&arguments[0], &one, None).expect("add")],
+            None
+        ),
+        Error::InvalidArgument(_)
     );
     let counted = graph
         .while_loop(

@@ -1146,6 +1146,27 @@ impl Graph {
             .unwrap_or_default()
     }
 
+    pub(crate) fn depends_on(&self, tensor: &Tensor, sources: &[Tensor]) -> bool {
+        let sources = sources
+            .iter()
+            .map(|source| source.ptr as usize)
+            .collect::<HashSet<_>>();
+        let state = self.state.borrow();
+        let mut pending = vec![tensor.ptr as usize];
+        let mut visited = HashSet::new();
+        while let Some(handle) = pending.pop() {
+            if sources.contains(&handle) {
+                return true;
+            }
+            if visited.insert(handle) {
+                if let Some(deps) = state.deps.get(&handle) {
+                    pending.extend(deps.iter().copied());
+                }
+            }
+        }
+        false
+    }
+
     pub(crate) fn record_call(&self, call: CallSignature) {
         self.state.borrow_mut().calls.push(call);
     }

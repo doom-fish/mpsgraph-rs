@@ -38,8 +38,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   foreign ones with `Error::ForeignTensor` or `Error::ForeignOperation`.
 - Control-flow blocks whose results disagreed in count, data type or shape (including
   dynamic against static dimensions), `if` blocks without results, `while` predicates
-  that are not rank-0 bool tensors, `while` before-blocks without results and `for`
-  loops without body arguments aborted MPSGraph. The bridge now checks the block
+  that are not rank-0 bool tensors computed from the loop inputs (MPSGraph aborts on
+  constant predicates), `while` before-blocks without results and `for` loops without
+  body arguments aborted MPSGraph. The bridge now checks the block
   results, fills a refused block with placeholders of the expected types so the graph
   stays valid, and the builder returns an error.
 - Running or compiling a graph whose targets depend on an unfed placeholder, including

@@ -118,12 +118,19 @@ where
     let inputs = collect_owned_tensors(input_box_handle, scope);
     let result = catch_unwind(AssertUnwindSafe(|| (block.callback)(&inputs)))
         .unwrap_or_else(|_| std::process::abort());
+    let computed = block.graph.depends_on(&result.predicate, &inputs);
     let produced = result
         .results
         .iter()
         .chain(core::iter::once(&result.predicate))
         .collect::<Vec<_>>();
     if !block.finish(Some(scope), &produced) || out_result_box_handle.is_null() {
+        return ptr::null_mut();
+    }
+    if !computed {
+        block.error.get_or_insert(Error::InvalidArgument(
+            "the while predicate must be computed from the before block's inputs; MPSGraph aborts on constant predicates",
+        ));
         return ptr::null_mut();
     }
     // SAFETY: the caller provided a valid output slot for the tensor-array box.
