@@ -1,7 +1,9 @@
-use apple_metal::{resource_options, MetalBuffer, MetalDevice, MetalTensor};
+use apple_metal::{
+    resource_options, MetalBuffer, MetalDevice, MetalTensor, MetalTensorDataType, MetalTensorUsage,
+    TensorDescriptor,
+};
 use apple_mpsgraph::{data_type, data_type_bits, data_type_size, Error, Feed, Graph, TensorData};
 use core::ffi::{c_char, c_void};
-use core::ptr;
 
 type Id = *mut c_void;
 
@@ -19,10 +21,6 @@ macro_rules! msg_send {
         )($receiver, sel_registerName($selector.as_ptr()) $(, $arg)*)
     };
 }
-
-const MTL_TENSOR_DATA_TYPE_FLOAT32: isize = 3;
-const MTL_TENSOR_USAGE_COMPUTE: usize = 1;
-const MTL_TENSOR_USAGE_MACHINE_LEARNING: usize = 1 << 2;
 
 unsafe fn tensor_extents(values: &[isize]) -> Id {
     let extents = msg_send!(objc_getClass(c"MTLTensorExtents".as_ptr()), c"alloc"; -> Id);
@@ -68,34 +66,22 @@ unsafe fn replace_tensor_values(tensor: Id, extents: &[isize], values: &[f32]) {
 fn metal_tensor(
     device: &MetalDevice,
     shape: &[usize],
-    usage: usize,
+    usage: MetalTensorUsage,
     values: &[f32],
 ) -> MetalTensor {
-    let extents = shape
+    let extents = shape.iter().rev().copied().collect::<Vec<_>>();
+    let tensor = device
+        .new_tensor(&TensorDescriptor {
+            usage,
+            ..TensorDescriptor::new(&extents, MetalTensorDataType::FLOAT32)
+        })
+        .expect("MTLTensor");
+    let signed = extents
         .iter()
-        .rev()
         .map(|extent| isize::try_from(*extent).expect("extent"))
         .collect::<Vec<_>>();
-    unsafe {
-        let descriptor = msg_send!(objc_getClass(c"MTLTensorDescriptor".as_ptr()), c"new"; -> Id);
-        let dimensions = tensor_extents(&extents);
-        msg_send!(descriptor, c"setDimensions:", dimensions => Id; -> ());
-        msg_send!(descriptor, c"setDataType:", MTL_TENSOR_DATA_TYPE_FLOAT32 => isize; -> ());
-        msg_send!(descriptor, c"setUsage:", usage => usize; -> ());
-        let mut error: Id = ptr::null_mut();
-        let tensor = msg_send!(
-            device.as_ptr(),
-            c"newTensorWithDescriptor:error:",
-            descriptor => Id,
-            &raw mut error => *mut Id;
-            -> Id
-        );
-        release(dimensions);
-        release(descriptor);
-        assert!(!tensor.is_null(), "newTensorWithDescriptor failed");
-        replace_tensor_values(tensor, &extents, values);
-        MetalTensor::from_raw(tensor)
-    }
+    unsafe { replace_tensor_values(tensor.as_ptr(), &signed, values) };
+    tensor
 }
 
 fn device() -> MetalDevice {
@@ -278,7 +264,8 @@ fn metal_tensors_alias_as_tensor_data_on_macos_26() {
     }
     let device = device();
     let values = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
-    let usage = MTL_TENSOR_USAGE_COMPUTE | MTL_TENSOR_USAGE_MACHINE_LEARNING;
+    let usage =
+        MetalTensorUsage(MetalTensorUsage::COMPUTE.0 | MetalTensorUsage::MACHINE_LEARNING.0);
     let tensor = metal_tensor(&device, &[2, 3], usage, &values);
     let data = TensorData::from_tensor(&tensor).expect("tensor data from MTLTensor");
     assert_eq!(data.shape(), vec![2, 3]);
@@ -290,7 +277,7 @@ fn metal_tensors_alias_as_tensor_data_on_macos_26() {
     unsafe { replace_tensor_values(tensor.as_ptr(), &[3, 2], &updated) };
     assert_eq!(data.read_f32().expect("read alias"), updated.to_vec());
 
-    let compute_only = metal_tensor(&device, &[2, 3], MTL_TENSOR_USAGE_COMPUTE, &values);
+    let compute_only = metal_tensor(&device, &[2, 3], MetalTensorUsage::COMPUTE, &values);
     assert!(TensorData::from_tensor(&compute_only).is_none());
 }
 

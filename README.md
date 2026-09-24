@@ -16,8 +16,9 @@ apple-metal = "0.10"
 ```
 
 Requires macOS 11 or later and Rust 1.82. Many newer graph APIs need macOS 12 to 15 and
-return `None` or `Err` on older systems. `TensorData::from_tensor` needs macOS 26, and
-the Float8 and Float4 data types need macOS 27.
+return `None` or `Err` on older systems. `TensorData::from_tensor` needs macOS 26 and a
+tensor with `MetalTensorUsage::MACHINE_LEARNING` usage, which `apple_metal::MetalDevice::new_tensor`
+creates without unsafe code, and the Float8 and Float4 data types need macOS 27.
 
 ## Quick start
 

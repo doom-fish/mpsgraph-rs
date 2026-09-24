@@ -137,6 +137,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Sub-byte types pack across the whole array; `data_type_size` covers every byte-sized
   type.
 - `AsyncRun` with `is_complete`, `wait` and `wait_timeout`.
+- `TensorData::from_tensor` can alias tensors from apple-metal's safe
+  `MetalDevice::new_tensor` (with `MetalTensorUsage::MACHINE_LEARNING` usage), so
+  it no longer needs an unsafe `MetalTensor::from_raw`; the tests use it.
 
 ### Removed
 

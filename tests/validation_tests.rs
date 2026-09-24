@@ -267,7 +267,9 @@ fn async_runs_expose_results_only_after_completion() {
     };
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].read_f32().expect("read"), expected);
-    assert!(event.wait_until_signaled_value(5, 10_000));
+    event
+        .wait_until_signaled_value(5, 10_000)
+        .expect("the graph signals the event");
     assert_eq!(event.signaled_value(), 5);
     assert!(!descriptor.wait_until_completed());
 
