@@ -19,6 +19,12 @@ pub enum Error {
     InvalidShape(&'static str),
     ExecutionFailed(String),
     Unsupported(&'static str),
+    InvalidDataType(&'static str),
+    InvalidArgument(&'static str),
+    ForeignTensor,
+    ForeignOperation,
+    MissingFeed,
+    MissingCallable(String),
 }
 
 impl core::fmt::Display for Error {
@@ -42,6 +48,21 @@ impl core::fmt::Display for Error {
             Self::InvalidShape(message) => write!(f, "invalid shape or axis: {message}"),
             Self::ExecutionFailed(message) => write!(f, "graph execution failed: {message}"),
             Self::Unsupported(message) => write!(f, "unsupported: {message}"),
+            Self::InvalidDataType(message) => write!(f, "invalid data type: {message}"),
+            Self::InvalidArgument(message) => write!(f, "invalid argument: {message}"),
+            Self::ForeignTensor => f.write_str(
+                "the tensor belongs to another graph or to a control-flow block that has ended",
+            ),
+            Self::ForeignOperation => f.write_str(
+                "the operation belongs to another graph or to a control-flow block that has ended",
+            ),
+            Self::MissingFeed => {
+                f.write_str("a placeholder that the targets depend on has no feed")
+            }
+            Self::MissingCallable(symbol) => write!(
+                f,
+                "no compatible callable is set for the call symbol {symbol:?}"
+            ),
         }
     }
 }

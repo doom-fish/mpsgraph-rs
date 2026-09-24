@@ -1,10 +1,17 @@
+use crate::checks::{self, Dims};
 use crate::data::TensorData;
 use crate::error::{Error, Result};
 use crate::ffi;
+use crate::types::Operation;
 use apple_metal::{CommandQueue, MetalDevice};
+use core::cell::RefCell;
 use core::ffi::{c_char, c_void};
+use core::marker::PhantomData;
 use core::ptr;
+use std::collections::{HashMap, HashSet};
 use std::ffi::CString;
+use std::sync::atomic::{AtomicU64, Ordering};
+
 
 /// Selected `MPSDataType` constants useful for graph inputs and outputs.
 pub mod data_type {
@@ -133,7 +140,39 @@ pub mod padding_mode {
     pub const ANTI_PERIODIC: isize = 6;
 }
 
-macro_rules! opaque_handle {
+macro_rules! descriptor_handle {
+    ($name:ident, $info:ident) => {
+/// Mirrors the `MPSGraph` framework counterpart for this type.
+        pub struct $name {
+            ptr: *mut c_void,
+            info: $info,
+        }
+
+        unsafe impl Send for $name {}
+        unsafe impl Sync for $name {}
+
+        impl Drop for $name {
+            fn drop(&mut self) {
+                if !self.ptr.is_null() {
+                    // SAFETY: `ptr` is a +1 retained Swift/ObjC object pointer owned by this wrapper.
+                    unsafe { ffi::mpsgraph_object_release(self.ptr) };
+                    self.ptr = ptr::null_mut();
+                }
+            }
+        }
+
+        impl $name {
+/// Mirrors the `MPSGraph` framework constant `fn`.
+            #[must_use]
+            pub const fn as_ptr(&self) -> *mut c_void {
+                self.ptr
+            }
+
+            pub(crate) const fn info(&self) -> &$info {
+                &self.info
+            }
+        }
+    };
     ($name:ident) => {
 /// Mirrors the `MPSGraph` framework counterpart for this type.
         pub struct $name {
@@ -159,6 +198,17 @@ macro_rules! opaque_handle {
             pub const fn as_ptr(&self) -> *mut c_void {
                 self.ptr
             }
+
+            fn created(ptr: *mut c_void) -> Result<Self> {
+                if ptr.is_null() {
+                    Err(Error::OperationFailed(concat!(
+                        "MPSGraph did not create the ",
+                        stringify!($name)
+                    )))
+                } else {
+                    Ok(Self { ptr })
+                }
+            }
         }
     };
 }
@@ -181,14 +231,6 @@ fn cstring_ptr(value: &Option<CString>) -> *const c_char {
     value.as_ref().map_or(ptr::null(), |value| value.as_ptr())
 }
 
-fn wrap_tensor(ptr: *mut c_void) -> Option<Tensor> {
-    if ptr.is_null() {
-        None
-    } else {
-        Some(Tensor { ptr })
-    }
-}
-
 fn wrap_tensor_data_results(
     handles: Vec<*mut c_void>,
     message: &'static str,
@@ -204,18 +246,16 @@ fn wrap_tensor_data_results(
 }
 
 macro_rules! impl_binary_tensor_op {
-    ($fn_name:ident, $ffi_name:ident, $compatible:ident) => {
+    ($fn_name:ident, $ffi_name:ident, $compatible:path) => {
 /// Calls the `MPSGraph` framework counterpart for this method.
-        #[must_use]
         pub fn $fn_name(
             &self,
             primary: &Tensor,
             secondary: &Tensor,
             name: Option<&str>,
-        ) -> Option<Tensor> {
-            if !$compatible(primary, secondary) {
-                return None;
-            }
+        ) -> Result<Tensor> {
+            self.check(&[primary, secondary])?;
+            $compatible(primary, secondary)?;
             let name = optional_cstring(name);
             // SAFETY: All pointers originate from safe wrappers and remain alive for the duration of the call.
             let ptr = unsafe {
@@ -226,7 +266,11 @@ macro_rules! impl_binary_tensor_op {
                     cstring_ptr(&name),
                 )
             };
-            wrap_tensor(ptr)
+            self.output(
+                ptr,
+                &[primary, secondary],
+                concat!("MPSGraph did not create ", stringify!($fn_name)),
+            )
         }
     };
 }
@@ -234,12 +278,16 @@ macro_rules! impl_binary_tensor_op {
 macro_rules! impl_unary_tensor_op {
     ($fn_name:ident, $ffi_name:ident) => {
 /// Calls the `MPSGraph` framework counterpart for this method.
-        #[must_use]
-        pub fn $fn_name(&self, tensor: &Tensor, name: Option<&str>) -> Option<Tensor> {
+        pub fn $fn_name(&self, tensor: &Tensor, name: Option<&str>) -> Result<Tensor> {
+            self.check(&[tensor])?;
             let name = optional_cstring(name);
             // SAFETY: All pointers originate from safe wrappers and remain alive for the duration of the call.
             let ptr = unsafe { ffi::$ffi_name(self.ptr, tensor.as_ptr(), cstring_ptr(&name)) };
-            wrap_tensor(ptr)
+            self.output(
+                ptr,
+                &[tensor],
+                concat!("MPSGraph did not create ", stringify!($fn_name)),
+            )
         }
     };
 }
@@ -247,16 +295,14 @@ macro_rules! impl_unary_tensor_op {
 macro_rules! impl_axes_tensor_op {
     ($fn_name:ident, $ffi_name:ident) => {
 /// Calls the `MPSGraph` framework counterpart for this method.
-        #[must_use]
         pub fn $fn_name(
             &self,
             tensor: &Tensor,
             axes: &[usize],
             name: Option<&str>,
-        ) -> Option<Tensor> {
-            if !axes_in_range(tensor, axes) {
-                return None;
-            }
+        ) -> Result<Tensor> {
+            self.check(&[tensor])?;
+            axes_in_range(tensor, axes)?;
             let name = optional_cstring(name);
             // SAFETY: All pointers originate from safe wrappers and remain alive for the duration of the call.
             let ptr = unsafe {
@@ -268,7 +314,11 @@ macro_rules! impl_axes_tensor_op {
                     cstring_ptr(&name),
                 )
             };
-            wrap_tensor(ptr)
+            self.output(
+                ptr,
+                &[tensor],
+                concat!("MPSGraph did not create ", stringify!($fn_name)),
+            )
         }
     };
 }
@@ -361,11 +411,60 @@ impl Default for Convolution2DDescriptorInfo {
     }
 }
 
-opaque_handle!(Convolution2DDescriptor);
+pub(crate) const fn valid_padding_style(style: usize) -> bool {
+    style <= padding_style::ONNX_SAME_LOWER
+}
+
+pub(crate) const fn pads_window(style: usize) -> Option<bool> {
+    match style {
+        padding_style::EXPLICIT | padding_style::EXPLICIT_OFFSET => Some(true),
+        padding_style::TF_VALID => Some(false),
+        _ => None,
+    }
+}
+
+pub(crate) fn image_layout(layout: usize, dims: &[isize]) -> Result<(isize, isize, isize, isize)> {
+    let &[first, second, third, fourth] = dims else {
+        return Err(Error::InvalidShape("2D image tensors must have rank 4"));
+    };
+    match layout {
+        tensor_named_data_layout::NHWC => Ok((first, second, third, fourth)),
+        tensor_named_data_layout::NCHW => Ok((first, third, fourth, second)),
+        _ => Err(Error::InvalidArgument("the data layout must be NHWC or NCHW")),
+    }
+}
+
+descriptor_handle!(Convolution2DDescriptor, Convolution2DDescriptorInfo);
 impl Convolution2DDescriptor {
 /// Calls the `MPSGraph` framework counterpart for `new`.
-    #[must_use]
-    pub fn new(info: Convolution2DDescriptorInfo) -> Option<Self> {
+    pub fn new(info: Convolution2DDescriptorInfo) -> Result<Self> {
+        if [
+            info.stride_in_x,
+            info.stride_in_y,
+            info.dilation_rate_in_x,
+            info.dilation_rate_in_y,
+            info.groups,
+        ]
+        .contains(&0)
+        {
+            return Err(Error::InvalidArgument(
+                "convolution strides, dilation rates and groups must be at least 1",
+            ));
+        }
+        if !valid_padding_style(info.padding_style) {
+            return Err(Error::InvalidArgument("unknown MPSGraphPaddingStyle"));
+        }
+        if !matches!(
+            info.data_layout,
+            tensor_named_data_layout::NHWC | tensor_named_data_layout::NCHW
+        ) || !matches!(
+            info.weights_layout,
+            tensor_named_data_layout::HWIO | tensor_named_data_layout::OIHW
+        ) {
+            return Err(Error::InvalidArgument(
+                "2D convolutions take NHWC or NCHW data and HWIO or OIHW weights",
+            ));
+        }
         // SAFETY: All scalar configuration values are POD.
         let ptr = unsafe {
             ffi::mpsgraph_convolution2d_descriptor_new(
@@ -384,11 +483,125 @@ impl Convolution2DDescriptor {
             )
         };
         if ptr.is_null() {
-            None
+            Err(Error::OperationFailed(
+                "MPSGraph did not create the convolution descriptor",
+            ))
         } else {
-            Some(Self { ptr })
+            Ok(Self { ptr, info })
         }
     }
+}
+
+pub(crate) struct Convolution2DShapes {
+    pub(crate) batch: isize,
+    pub(crate) height: isize,
+    pub(crate) width: isize,
+    pub(crate) channels: isize,
+    pub(crate) kernel_height: isize,
+    pub(crate) kernel_width: isize,
+    pub(crate) weight_inputs: isize,
+    pub(crate) weight_outputs: isize,
+}
+
+pub(crate) fn convolution2d_shapes(
+    info: &Convolution2DDescriptorInfo,
+    source: &[isize],
+    weights: &[isize],
+) -> Result<Convolution2DShapes> {
+    let (batch, height, width, channels) = image_layout(info.data_layout, source)?;
+    let &[w0, w1, w2, w3] = weights else {
+        return Err(Error::InvalidShape("convolution weights must have rank 4"));
+    };
+    let (kernel_height, kernel_width, weight_inputs, weight_outputs) = match info.weights_layout
+    {
+        tensor_named_data_layout::HWIO => (w0, w1, w2, w3),
+        _ => (w2, w3, w1, w0),
+    };
+    Ok(Convolution2DShapes {
+        batch,
+        height,
+        width,
+        channels,
+        kernel_height,
+        kernel_width,
+        weight_inputs,
+        weight_outputs,
+    })
+}
+
+fn check_groups(channels: isize, weight_inputs: isize, weight_outputs: isize, groups: usize) -> Result<()> {
+    if let (Some(channels), Some(inputs)) = (checks::known(channels), checks::known(weight_inputs)) {
+        if inputs.checked_mul(groups) != Some(channels) {
+            return Err(Error::InvalidShape(
+                "the input channels must equal groups times the weights' input channels",
+            ));
+        }
+    }
+    if checks::known(weight_outputs).is_some_and(|outputs| outputs % groups != 0) {
+        return Err(Error::InvalidShape(
+            "the weights' output channels must be divisible by groups",
+        ));
+    }
+    Ok(())
+}
+
+fn check_convolution2d(
+    info: &Convolution2DDescriptorInfo,
+    source: &Tensor,
+    weights: &Tensor,
+) -> Result<()> {
+    checks::float_tensor(source, "convolutions need a floating-point source")?;
+    checks::same_data_type(
+        source,
+        weights,
+        "the convolution weights need the source's data type",
+    )?;
+    let (Some(source_dims), Some(weight_dims)) = (
+        checks::rank_exactly(source, 4, "the convolution source must have rank 4")?,
+        checks::rank_exactly(weights, 4, "convolution weights must have rank 4")?,
+    ) else {
+        return Ok(());
+    };
+    let shapes = convolution2d_shapes(info, &source_dims, &weight_dims)?;
+    check_groups(
+        shapes.channels,
+        shapes.weight_inputs,
+        shapes.weight_outputs,
+        info.groups,
+    )?;
+    if let Some(padded) = pads_window(info.padding_style) {
+        let (top, bottom, left, right) = if padded {
+            (
+                info.padding_top,
+                info.padding_bottom,
+                info.padding_left,
+                info.padding_right,
+            )
+        } else {
+            (0, 0, 0, 0)
+        };
+        let fits = |extent, kernel: isize, dilation, pads| {
+            checks::known(kernel).is_none_or(|kernel| {
+                kernel > 0 && checks::window_fits(extent, kernel, dilation, pads)
+            })
+        };
+        if !fits(
+            shapes.height,
+            shapes.kernel_height,
+            info.dilation_rate_in_y,
+            (top, bottom),
+        ) || !fits(
+            shapes.width,
+            shapes.kernel_width,
+            info.dilation_rate_in_x,
+            (left, right),
+        ) {
+            return Err(Error::InvalidShape(
+                "the dilated kernel is larger than the padded source",
+            ));
+        }
+    }
+    Ok(())
 }
 
 /// Plain-Rust configuration for `MPSGraphPooling2DOpDescriptor`.
@@ -441,11 +654,35 @@ impl Pooling2DDescriptorInfo {
     }
 }
 
-opaque_handle!(Pooling2DDescriptor);
+descriptor_handle!(Pooling2DDescriptor);
 impl Pooling2DDescriptor {
 /// Calls the `MPSGraph` framework counterpart for `new`.
-    #[must_use]
-    pub fn new(info: Pooling2DDescriptorInfo) -> Option<Self> {
+    pub fn new(info: Pooling2DDescriptorInfo) -> Result<Self> {
+        if [
+            info.kernel_width,
+            info.kernel_height,
+            info.stride_in_x,
+            info.stride_in_y,
+            info.dilation_rate_in_x,
+            info.dilation_rate_in_y,
+        ]
+        .contains(&0)
+        {
+            return Err(Error::InvalidArgument(
+                "pooling kernel sizes, strides and dilation rates must be at least 1",
+            ));
+        }
+        if !valid_padding_style(info.padding_style) {
+            return Err(Error::InvalidArgument("unknown MPSGraphPaddingStyle"));
+        }
+        if !matches!(
+            info.data_layout,
+            tensor_named_data_layout::NHWC | tensor_named_data_layout::NCHW
+        ) {
+            return Err(Error::InvalidArgument(
+                "2D pooling takes NHWC or NCHW data",
+            ));
+        }
         // SAFETY: All scalar configuration values are POD.
         let ptr = unsafe {
             ffi::mpsgraph_pooling2d_descriptor_new(
@@ -463,21 +700,126 @@ impl Pooling2DDescriptor {
                 info.data_layout,
             )
         };
-        if ptr.is_null() {
-            None
-        } else {
-            Some(Self { ptr })
+        Self::created(ptr)
+    }
+}
+
+static NEXT_SCOPE: AtomicU64 = AtomicU64::new(1);
+
+struct Scope {
+    id: u64,
+    created: Vec<usize>,
+}
+
+impl Scope {
+    fn new() -> Self {
+        Self {
+            id: NEXT_SCOPE.fetch_add(1, Ordering::Relaxed),
+            created: Vec::new(),
         }
     }
 }
 
-opaque_handle!(Graph);
-opaque_handle!(Tensor);
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct TypeSignature {
+    pub(crate) shape: Option<Dims>,
+    pub(crate) data_type: u32,
+}
+
+impl TypeSignature {
+    pub(crate) fn of(tensor: &Tensor) -> Self {
+        Self {
+            shape: tensor.shape(),
+            data_type: tensor.data_type(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct CallSignature {
+    pub(crate) symbol: String,
+    pub(crate) inputs: Vec<TypeSignature>,
+    pub(crate) outputs: Vec<TypeSignature>,
+}
+
+struct GraphState {
+    scopes: Vec<Scope>,
+    deps: HashMap<usize, Vec<usize>>,
+    placeholders: Vec<(usize, u64)>,
+    calls: Vec<CallSignature>,
+}
+
+impl GraphState {
+    fn is_open(&self, scope: u64) -> bool {
+        self.scopes.iter().any(|open| open.id == scope)
+    }
+
+    fn record(&mut self, handle: usize, deps: &[usize]) -> u64 {
+        if !deps.is_empty() {
+            self.deps.entry(handle).or_default().extend_from_slice(deps);
+        }
+        self.scopes.last_mut().map_or(0, |scope| {
+            scope.created.push(handle);
+            scope.id
+        })
+    }
+}
+
+/// Mirrors the `MPSGraph` framework counterpart for this type.
+pub struct Graph {
+    ptr: *mut c_void,
+    state: RefCell<GraphState>,
+}
+
+unsafe impl Send for Graph {}
+
+impl Drop for Graph {
+    fn drop(&mut self) {
+        if !self.ptr.is_null() {
+            // SAFETY: `ptr` is a +1 retained Swift/ObjC object pointer owned by this wrapper.
+            unsafe { ffi::mpsgraph_object_release(self.ptr) };
+            self.ptr = ptr::null_mut();
+        }
+    }
+}
+
+/// Mirrors the `MPSGraph` framework counterpart for this type.
+pub struct Tensor {
+    ptr: *mut c_void,
+    scope: u64,
+}
+
+unsafe impl Send for Tensor {}
+unsafe impl Sync for Tensor {}
+
+impl Drop for Tensor {
+    fn drop(&mut self) {
+        if !self.ptr.is_null() {
+            // SAFETY: `ptr` is a +1 retained Swift/ObjC object pointer owned by this wrapper.
+            unsafe { ffi::mpsgraph_object_release(self.ptr) };
+            self.ptr = ptr::null_mut();
+        }
+    }
+}
 
 impl Tensor {
-    pub(crate) const fn from_raw(ptr: *mut c_void) -> Self {
-        Self { ptr }
+/// Mirrors the `MPSGraph` framework constant `fn`.
+    #[must_use]
+    pub const fn as_ptr(&self) -> *mut c_void {
+        self.ptr
     }
+
+    pub(crate) const fn from_raw(ptr: *mut c_void, scope: u64) -> Self {
+        Self { ptr, scope }
+    }
+
+    pub(crate) const fn scope(&self) -> u64 {
+        self.scope
+    }
+}
+
+pub(crate) fn handles(tensors: &[&Tensor]) -> Vec<usize> {
+    tensors.iter().map(|tensor| tensor.ptr as usize).collect()
 }
 
 pub(crate) fn volume(dimensions: &[usize]) -> Option<usize> {
@@ -498,42 +840,38 @@ fn dimension_matches(expected: isize, actual: usize) -> bool {
     expected < 0 || usize::try_from(expected).ok() == Some(actual)
 }
 
-pub(crate) fn axis_in_range(tensor: &Tensor, axis: isize) -> bool {
-    tensor.shape().is_none_or(|shape| {
-        isize::try_from(shape.len()).is_ok_and(|rank| (-rank..rank).contains(&axis))
-    })
+pub(crate) fn axis_in_range(tensor: &Tensor, axis: isize) -> Result<()> {
+    checks::axis(tensor, axis).map(drop)
 }
 
-pub(crate) fn axes_in_range(tensor: &Tensor, axes: &[usize]) -> bool {
-    tensor
-        .shape()
-        .is_none_or(|shape| axes.iter().all(|axis| *axis < shape.len()))
+pub(crate) fn axes_in_range(tensor: &Tensor, axes: &[usize]) -> Result<()> {
+    match tensor.shape() {
+        Some(shape) if axes.iter().any(|axis| *axis >= shape.len()) => Err(Error::InvalidShape(
+            "every axis must be below the tensor's rank",
+        )),
+        _ => Ok(()),
+    }
 }
 
-fn broadcastable(left: &[isize], right: &[isize]) -> bool {
-    left.iter()
-        .rev()
-        .zip(right.iter().rev())
-        .all(|(a, b)| a == b || *a == 1 || *b == 1 || *a < 0 || *b < 0)
-}
-
-pub(crate) fn binary_operands_compatible(primary: &Tensor, secondary: &Tensor) -> bool {
-    primary.data_type() == secondary.data_type()
-        && match (primary.shape(), secondary.shape()) {
-            (Some(left), Some(right)) => broadcastable(&left, &right),
-            _ => true,
-        }
-}
-
-fn matrix_operands_compatible(primary: &Tensor, secondary: &Tensor) -> bool {
-    if primary.data_type() != secondary.data_type() {
-        return false;
+fn matrix_operands(primary: &Tensor, secondary: &Tensor) -> Result<()> {
+    checks::same_data_type(
+        primary,
+        secondary,
+        "matrix multiplication needs operands of one data type",
+    )?;
+    let data_type = primary.data_type();
+    if !checks::is_float(data_type) && !checks::is_complex(data_type) {
+        return Err(Error::InvalidDataType(
+            "matrix multiplication needs floating-point or complex operands",
+        ));
     }
     let (Some(mut left), Some(mut right)) = (primary.shape(), secondary.shape()) else {
-        return true;
+        return Ok(());
     };
     if left.is_empty() || right.is_empty() {
-        return false;
+        return Err(Error::InvalidShape(
+            "matrix multiplication operands need rank 1 or more",
+        ));
     }
     for shape in [&mut left, &mut right] {
         if shape.len() == 1 {
@@ -541,51 +879,85 @@ fn matrix_operands_compatible(primary: &Tensor, secondary: &Tensor) -> bool {
         }
     }
     let (inner, outer) = (left[left.len() - 1], right[right.len() - 2]);
-    (inner < 0 || outer < 0 || inner == outer)
-        && broadcastable(&left[..left.len() - 2], &right[..right.len() - 2])
+    if !checks::same_extent(inner, outer)
+        || !checks::broadcastable(&left[..left.len() - 2], &right[..right.len() - 2])
+    {
+        return Err(Error::InvalidShape(
+            "the matrix operands' inner or batch dimensions do not match",
+        ));
+    }
+    Ok(())
 }
 
-fn reshape_is_valid(tensor: &Tensor, shape: &[usize]) -> bool {
-    let target = volume(shape);
-    target.is_some() && static_dimensions(tensor).is_none_or(|source| volume(&source) == target)
+fn reshape_is_valid(tensor: &Tensor, shape: &[usize]) -> Result<()> {
+    let target = volume(shape).ok_or(Error::Overflow)?;
+    checks::shape_to_dims(shape)?;
+    if static_dimensions(tensor).is_some_and(|source| volume(&source) != Some(target)) {
+        return Err(Error::InvalidShape(
+            "a reshape must keep the tensor's element count",
+        ));
+    }
+    Ok(())
 }
 
-fn is_permutation(tensor: &Tensor, permutation: &[usize]) -> bool {
+fn is_permutation(tensor: &Tensor, permutation: &[usize]) -> Result<()> {
     let mut seen = vec![false; permutation.len()];
-    permutation
+    let valid = permutation
         .iter()
         .all(|axis| *axis < seen.len() && !core::mem::replace(&mut seen[*axis], true))
         && tensor
             .shape()
-            .is_none_or(|shape| shape.len() == permutation.len())
+            .is_none_or(|shape| shape.len() == permutation.len());
+    if valid {
+        Ok(())
+    } else {
+        Err(Error::InvalidShape(
+            "the permutation must reorder every axis exactly once",
+        ))
+    }
 }
 
-fn slice_in_range(tensor: &Tensor, dimension: usize, start: isize, length: isize) -> bool {
+fn slice_in_range(tensor: &Tensor, dimension: usize, start: isize, length: isize) -> Result<()> {
+    let invalid = Err(Error::InvalidShape(
+        "the slice lies outside the tensor's dimension",
+    ));
     if length < 0 {
-        return false;
+        return invalid;
     }
     let Some(shape) = tensor.shape() else {
-        return true;
+        return Ok(());
     };
     let Some(&size) = shape.get(dimension) else {
-        return false;
+        return invalid;
     };
     if size < 0 {
-        return true;
+        return Ok(());
     }
     let start = if start < 0 { start + size } else { start };
-    (0..=size).contains(&start) && start.checked_add(length).is_some_and(|end| end <= size)
+    if (0..=size).contains(&start) && start.checked_add(length).is_some_and(|end| end <= size) {
+        Ok(())
+    } else {
+        invalid
+    }
 }
 
-fn broadcast_is_valid(tensor: &Tensor, shape: &[usize]) -> bool {
-    tensor.shape().is_none_or(|source| {
+fn broadcast_is_valid(tensor: &Tensor, shape: &[usize]) -> Result<()> {
+    checks::shape_to_dims(shape)?;
+    let valid = tensor.shape().is_none_or(|source| {
         source.len() <= shape.len()
             && source
                 .iter()
                 .rev()
                 .zip(shape.iter().rev())
                 .all(|(from, to)| *from == 1 || dimension_matches(*from, *to))
-    })
+    });
+    if valid {
+        Ok(())
+    } else {
+        Err(Error::InvalidShape(
+            "the tensor cannot be broadcast to that shape",
+        ))
+    }
 }
 
 pub(crate) fn feed_matches(tensor: &Tensor, shape: &[usize], data_type: u32) -> bool {
@@ -605,6 +977,26 @@ fn feeds_match(feeds: &[Feed<'_>]) -> bool {
         .all(|feed| feed_matches(feed.tensor, &feed.data.shape(), feed.data.data_type()))
 }
 
+pub(crate) const fn constant_data_type(data_type: u32) -> bool {
+    matches!(
+        data_type,
+        data_type::FLOAT32
+            | data_type::FLOAT16
+            | data_type::BFLOAT16
+            | data_type::INT8
+            | data_type::INT16
+            | data_type::INT32
+            | data_type::INT64
+            | data_type::UINT8
+            | data_type::UINT16
+            | data_type::UINT32
+            | data_type::UINT64
+            | data_type::BOOL
+            | data_type::COMPLEX_FLOAT16
+            | data_type::COMPLEX_FLOAT32
+    )
+}
+
 impl Graph {
 /// Calls the `MPSGraph` framework counterpart for `new`.
     #[must_use]
@@ -614,18 +1006,225 @@ impl Graph {
         if ptr.is_null() {
             None
         } else {
-            Some(Self { ptr })
+            Some(Self {
+                ptr,
+                state: RefCell::new(GraphState {
+                    scopes: vec![Scope::new()],
+                    deps: HashMap::new(),
+                    placeholders: Vec::new(),
+                    calls: Vec::new(),
+                }),
+            })
         }
     }
 
-/// Calls the `MPSGraph` framework counterpart for `placeholder`.
+/// Mirrors the `MPSGraph` framework constant `fn`.
     #[must_use]
+    pub const fn as_ptr(&self) -> *mut c_void {
+        self.ptr
+    }
+
+    pub(crate) fn check(&self, tensors: &[&Tensor]) -> Result<()> {
+        let state = self.state.borrow();
+        if tensors.iter().all(|tensor| state.is_open(tensor.scope)) {
+            Ok(())
+        } else {
+            Err(Error::ForeignTensor)
+        }
+    }
+
+    pub(crate) fn check_operations(&self, operations: &[&Operation]) -> Result<()> {
+        let state = self.state.borrow();
+        if operations
+            .iter()
+            .all(|operation| state.is_open(operation.scope()))
+        {
+            Ok(())
+        } else {
+            Err(Error::ForeignOperation)
+        }
+    }
+
+    pub(crate) fn output(
+        &self,
+        ptr: *mut c_void,
+        inputs: &[&Tensor],
+        failure: &'static str,
+    ) -> Result<Tensor> {
+        if ptr.is_null() {
+            return Err(Error::OperationFailed(failure));
+        }
+        let scope = self
+            .state
+            .borrow_mut()
+            .record(ptr as usize, &handles(inputs));
+        Ok(Tensor { ptr, scope })
+    }
+
+    pub(crate) fn outputs(
+        &self,
+        box_handle: *mut c_void,
+        deps: &[usize],
+        count: Option<usize>,
+        failure: &'static str,
+    ) -> Result<Vec<Tensor>> {
+        if box_handle.is_null() {
+            return Err(Error::OperationFailed(failure));
+        }
+        let raw = take_tensor_handles(box_handle);
+        if raw.iter().any(|handle| handle.is_null()) || count.is_some_and(|count| count != raw.len())
+        {
+            release_handles(raw);
+            return Err(Error::OperationFailed(failure));
+        }
+        let mut state = self.state.borrow_mut();
+        Ok(raw
+            .into_iter()
+            .map(|ptr| {
+                let scope = state.record(ptr as usize, deps);
+                Tensor { ptr, scope }
+            })
+            .collect())
+    }
+
+    pub(crate) fn output_pair(
+        &self,
+        box_handle: *mut c_void,
+        inputs: &[&Tensor],
+        failure: &'static str,
+    ) -> Result<(Tensor, Tensor)> {
+        let mut values = self.outputs(box_handle, &handles(inputs), Some(2), failure)?;
+        let second = values.pop().ok_or(Error::OperationFailed(failure))?;
+        let first = values.pop().ok_or(Error::OperationFailed(failure))?;
+        Ok((first, second))
+    }
+
+    pub(crate) fn operation(
+        &self,
+        ptr: *mut c_void,
+        inputs: &[&Tensor],
+        failure: &'static str,
+    ) -> Result<Operation> {
+        if ptr.is_null() {
+            return Err(Error::OperationFailed(failure));
+        }
+        let deps = handles(inputs);
+        let scope = self.state.borrow_mut().record(ptr as usize, &deps);
+        Ok(Operation::from_raw(ptr, scope, deps))
+    }
+
+    pub(crate) fn open_block(&self) -> u64 {
+        let scope = Scope::new();
+        let id = scope.id;
+        self.state.borrow_mut().scopes.push(scope);
+        id
+    }
+
+    pub(crate) fn close_block(&self, id: u64) -> Vec<usize> {
+        let mut state = self.state.borrow_mut();
+        if state.scopes.len() > 1 && state.scopes.last().is_some_and(|top| top.id == id) {
+            state.scopes.pop().map(|scope| scope.created).unwrap_or_default()
+        } else {
+            Vec::new()
+        }
+    }
+
+    pub(crate) fn created_mark(&self) -> usize {
+        self.state
+            .borrow()
+            .scopes
+            .last()
+            .map_or(0, |scope| scope.created.len())
+    }
+
+    pub(crate) fn created_since(&self, mark: usize) -> Vec<usize> {
+        self.state
+            .borrow()
+            .scopes
+            .last()
+            .map(|scope| scope.created.get(mark..).unwrap_or_default().to_vec())
+            .unwrap_or_default()
+    }
+
+    pub(crate) fn record_call(&self, call: CallSignature) {
+        self.state.borrow_mut().calls.push(call);
+    }
+
+    pub(crate) fn calls(&self) -> Vec<CallSignature> {
+        self.state.borrow().calls.clone()
+    }
+
+    pub(crate) fn placeholder_scope(&self, handle: *mut c_void) -> Option<u64> {
+        self.state
+            .borrow()
+            .placeholders
+            .iter()
+            .find(|(placeholder, _)| *placeholder == handle as usize)
+            .map(|(_, scope)| *scope)
+    }
+
+    pub(crate) fn check_execution(&self, feeds: &[&Tensor], targets: &[&Tensor]) -> Result<()> {
+        let state = self.state.borrow();
+        if state.scopes.len() != 1 {
+            return Err(Error::InvalidArgument(
+                "a graph cannot run or compile while a control-flow block is being built",
+            ));
+        }
+        let root = state.scopes[0].id;
+        if targets.iter().any(|target| target.scope != root) {
+            return Err(Error::ForeignTensor);
+        }
+        let placeholders = state
+            .placeholders
+            .iter()
+            .map(|(handle, _)| *handle)
+            .collect::<HashSet<_>>();
+        let mut fed = HashSet::with_capacity(feeds.len());
+        for feed in feeds {
+            let handle = feed.ptr as usize;
+            if !placeholders.contains(&handle) {
+                return Err(if state.is_open(feed.scope) {
+                    Error::InvalidArgument("only this graph's placeholders can be fed")
+                } else {
+                    Error::ForeignTensor
+                });
+            }
+            fed.insert(handle);
+        }
+        let mut pending = handles(targets);
+        let mut visited = HashSet::new();
+        while let Some(handle) = pending.pop() {
+            if !visited.insert(handle) {
+                continue;
+            }
+            if placeholders.contains(&handle) && !fed.contains(&handle) {
+                return Err(Error::MissingFeed);
+            }
+            if let Some(deps) = state.deps.get(&handle) {
+                pending.extend(deps.iter().filter(|dep| !visited.contains(*dep)));
+            }
+        }
+        Ok(())
+    }
+
+    fn check_no_calls(&self) -> Result<()> {
+        self.state
+            .borrow()
+            .calls
+            .first()
+            .map_or(Ok(()), |call| Err(Error::MissingCallable(call.symbol.clone())))
+    }
+
+/// Calls the `MPSGraph` framework counterpart for `placeholder`.
     pub fn placeholder(
         &self,
         shape: Option<&[usize]>,
         data_type: u32,
         name: Option<&str>,
-    ) -> Option<Tensor> {
+    ) -> Result<Tensor> {
+        if let Some(shape) = shape {
+            checks::shape_to_dims(shape)?;
+        }
         let name = optional_cstring(name);
         let (shape_ptr, shape_len) =
             shape.map_or((ptr::null(), 0), |shape| (shape.as_ptr(), shape.len()));
@@ -640,15 +1239,28 @@ impl Graph {
                 cstring_ptr(&name),
             )
         };
-        wrap_tensor(ptr)
+        let tensor = self.output(ptr, &[], "MPSGraph did not create the placeholder")?;
+        self.state
+            .borrow_mut()
+            .placeholders
+            .push((tensor.ptr as usize, tensor.scope));
+        Ok(tensor)
     }
 
 /// Calls the `MPSGraph` framework counterpart for `constant_bytes`.
-    #[must_use]
-    pub fn constant_bytes(&self, data: &[u8], shape: &[usize], data_type: u32) -> Option<Tensor> {
-        let expected = checked_byte_len(shape, data_type)?;
+    pub fn constant_bytes(&self, data: &[u8], shape: &[usize], data_type: u32) -> Result<Tensor> {
+        let expected = checked_byte_len(shape, data_type).ok_or_else(|| {
+            if data_type_bits(data_type).is_some() {
+                Error::Overflow
+            } else {
+                Error::UnsupportedDataType(data_type)
+            }
+        })?;
         if data.len() != expected {
-            return None;
+            return Err(Error::InvalidLength {
+                expected,
+                actual: data.len(),
+            });
         }
 
         // SAFETY: The byte slice remains valid for the duration of the FFI call.
@@ -662,12 +1274,11 @@ impl Graph {
                 data_type,
             )
         };
-        wrap_tensor(ptr)
+        self.output(ptr, &[], "MPSGraph did not create the constant")
     }
 
 /// Calls the `MPSGraph` framework counterpart for `constant_f32_slice`.
-    #[must_use]
-    pub fn constant_f32_slice(&self, values: &[f32], shape: &[usize]) -> Option<Tensor> {
+    pub fn constant_f32_slice(&self, values: &[f32], shape: &[usize]) -> Result<Tensor> {
         // SAFETY: `values` is a contiguous slice of `f32` that may be viewed as bytes.
         let bytes = unsafe {
             core::slice::from_raw_parts(
@@ -679,21 +1290,31 @@ impl Graph {
     }
 
 /// Calls the `MPSGraph` framework counterpart for `constant_scalar`.
-    #[must_use]
-    pub fn constant_scalar(&self, scalar: f64, data_type: u32) -> Option<Tensor> {
+    pub fn constant_scalar(&self, scalar: f64, data_type: u32) -> Result<Tensor> {
+        if !constant_data_type(data_type) {
+            return Err(Error::UnsupportedDataType(data_type));
+        }
         // SAFETY: Pure constructor over scalar inputs.
         let ptr = unsafe { ffi::mpsgraph_graph_constant_scalar(self.ptr, scalar, data_type) };
-        wrap_tensor(ptr)
+        self.output(ptr, &[], "MPSGraph did not create the constant")
     }
 
 /// Calls the `MPSGraph` framework counterpart for `constant_scalar_shaped`.
-    #[must_use]
     pub fn constant_scalar_shaped(
         &self,
         scalar: f64,
         shape: &[usize],
         data_type: u32,
-    ) -> Option<Tensor> {
+    ) -> Result<Tensor> {
+        if !constant_data_type(data_type) {
+            return Err(Error::UnsupportedDataType(data_type));
+        }
+        if shape.contains(&0) {
+            return Err(Error::InvalidShape(
+                "splatted constants need every dimension to be at least 1",
+            ));
+        }
+        checks::shape_to_dims(shape)?;
         // SAFETY: Shape slice stays valid for the duration of the FFI call.
         let ptr = unsafe {
             ffi::mpsgraph_graph_constant_scalar_shaped(
@@ -704,33 +1325,21 @@ impl Graph {
                 data_type,
             )
         };
-        wrap_tensor(ptr)
+        self.output(ptr, &[], "MPSGraph did not create the constant")
     }
 
-    impl_binary_tensor_op!(
-        addition,
-        mpsgraph_graph_addition,
-        binary_operands_compatible
-    );
-    impl_binary_tensor_op!(
-        subtraction,
-        mpsgraph_graph_subtraction,
-        binary_operands_compatible
-    );
+    impl_binary_tensor_op!(addition, mpsgraph_graph_addition, checks::elementwise);
+    impl_binary_tensor_op!(subtraction, mpsgraph_graph_subtraction, checks::elementwise);
     impl_binary_tensor_op!(
         multiplication,
         mpsgraph_graph_multiplication,
-        binary_operands_compatible
+        checks::elementwise
     );
-    impl_binary_tensor_op!(
-        division,
-        mpsgraph_graph_division,
-        binary_operands_compatible
-    );
+    impl_binary_tensor_op!(division, mpsgraph_graph_division, checks::elementwise);
     impl_binary_tensor_op!(
         matrix_multiplication,
         mpsgraph_graph_matrix_multiplication,
-        matrix_operands_compatible
+        matrix_operands
     );
     impl_unary_tensor_op!(relu, mpsgraph_graph_relu);
     impl_unary_tensor_op!(sigmoid, mpsgraph_graph_sigmoid);
@@ -740,25 +1349,22 @@ impl Graph {
     impl_axes_tensor_op!(mean, mpsgraph_graph_mean);
 
 /// Calls the `MPSGraph` framework counterpart for `softmax`.
-    #[must_use]
-    pub fn softmax(&self, tensor: &Tensor, axis: isize, name: Option<&str>) -> Option<Tensor> {
-        if !axis_in_range(tensor, axis) {
-            return None;
-        }
+    pub fn softmax(&self, tensor: &Tensor, axis: isize, name: Option<&str>) -> Result<Tensor> {
+        self.check(&[tensor])?;
+        axis_in_range(tensor, axis)?;
+        checks::float_tensor(tensor, "softmax needs a floating-point tensor")?;
         let name = optional_cstring(name);
         // SAFETY: All pointers originate from safe wrappers and remain alive for the duration of the call.
         let ptr = unsafe {
             ffi::mpsgraph_graph_softmax(self.ptr, tensor.as_ptr(), axis, cstring_ptr(&name))
         };
-        wrap_tensor(ptr)
+        self.output(ptr, &[tensor], "MPSGraph did not create softmax")
     }
 
 /// Calls the `MPSGraph` framework counterpart for `reshape`.
-    #[must_use]
-    pub fn reshape(&self, tensor: &Tensor, shape: &[usize], name: Option<&str>) -> Option<Tensor> {
-        if !reshape_is_valid(tensor, shape) {
-            return None;
-        }
+    pub fn reshape(&self, tensor: &Tensor, shape: &[usize], name: Option<&str>) -> Result<Tensor> {
+        self.check(&[tensor])?;
+        reshape_is_valid(tensor, shape)?;
         let name = optional_cstring(name);
         // SAFETY: All pointers originate from safe wrappers and remain alive for the duration of the call.
         let ptr = unsafe {
@@ -770,20 +1376,18 @@ impl Graph {
                 cstring_ptr(&name),
             )
         };
-        wrap_tensor(ptr)
+        self.output(ptr, &[tensor], "MPSGraph did not create the reshape")
     }
 
 /// Calls the `MPSGraph` framework counterpart for `transpose`.
-    #[must_use]
     pub fn transpose(
         &self,
         tensor: &Tensor,
         permutation: &[usize],
         name: Option<&str>,
-    ) -> Option<Tensor> {
-        if !is_permutation(tensor, permutation) {
-            return None;
-        }
+    ) -> Result<Tensor> {
+        self.check(&[tensor])?;
+        is_permutation(tensor, permutation)?;
         let name = optional_cstring(name);
         // SAFETY: All pointers originate from safe wrappers and remain alive for the duration of the call.
         let ptr = unsafe {
@@ -795,11 +1399,10 @@ impl Graph {
                 cstring_ptr(&name),
             )
         };
-        wrap_tensor(ptr)
+        self.output(ptr, &[tensor], "MPSGraph did not create the transpose")
     }
 
 /// Calls the `MPSGraph` framework counterpart for `slice`.
-    #[must_use]
     pub fn slice(
         &self,
         tensor: &Tensor,
@@ -807,10 +1410,9 @@ impl Graph {
         start: isize,
         length: isize,
         name: Option<&str>,
-    ) -> Option<Tensor> {
-        if !slice_in_range(tensor, dimension, start, length) {
-            return None;
-        }
+    ) -> Result<Tensor> {
+        self.check(&[tensor])?;
+        slice_in_range(tensor, dimension, start, length)?;
         let name = optional_cstring(name);
         // SAFETY: All pointers originate from safe wrappers and remain alive for the duration of the call.
         let ptr = unsafe {
@@ -823,20 +1425,18 @@ impl Graph {
                 cstring_ptr(&name),
             )
         };
-        wrap_tensor(ptr)
+        self.output(ptr, &[tensor], "MPSGraph did not create the slice")
     }
 
 /// Calls the `MPSGraph` framework counterpart for `broadcast`.
-    #[must_use]
     pub fn broadcast(
         &self,
         tensor: &Tensor,
         shape: &[usize],
         name: Option<&str>,
-    ) -> Option<Tensor> {
-        if !broadcast_is_valid(tensor, shape) {
-            return None;
-        }
+    ) -> Result<Tensor> {
+        self.check(&[tensor])?;
+        broadcast_is_valid(tensor, shape)?;
         let name = optional_cstring(name);
         // SAFETY: All pointers originate from safe wrappers and remain alive for the duration of the call.
         let ptr = unsafe {
@@ -848,18 +1448,19 @@ impl Graph {
                 cstring_ptr(&name),
             )
         };
-        wrap_tensor(ptr)
+        self.output(ptr, &[tensor], "MPSGraph did not create the broadcast")
     }
 
 /// Calls the `MPSGraph` framework counterpart for `convolution2d`.
-    #[must_use]
     pub fn convolution2d(
         &self,
         source: &Tensor,
         weights: &Tensor,
         descriptor: &Convolution2DDescriptor,
         name: Option<&str>,
-    ) -> Option<Tensor> {
+    ) -> Result<Tensor> {
+        self.check(&[source, weights])?;
+        check_convolution2d(descriptor.info(), source, weights)?;
         let name = optional_cstring(name);
         // SAFETY: All pointers originate from safe wrappers and remain alive for the duration of the call.
         let ptr = unsafe {
@@ -871,17 +1472,18 @@ impl Graph {
                 cstring_ptr(&name),
             )
         };
-        wrap_tensor(ptr)
+        self.output(ptr, &[source, weights], "MPSGraph did not create the convolution")
     }
 
 /// Calls the `MPSGraph` framework counterpart for `max_pooling2d`.
-    #[must_use]
     pub fn max_pooling2d(
         &self,
         source: &Tensor,
         descriptor: &Pooling2DDescriptor,
         name: Option<&str>,
-    ) -> Option<Tensor> {
+    ) -> Result<Tensor> {
+        self.check(&[source])?;
+        checks::rank_exactly(source, 4, "2D pooling needs a rank-4 source")?;
         let name = optional_cstring(name);
         // SAFETY: All pointers originate from safe wrappers and remain alive for the duration of the call.
         let ptr = unsafe {
@@ -892,12 +1494,11 @@ impl Graph {
                 cstring_ptr(&name),
             )
         };
-        wrap_tensor(ptr)
+        self.output(ptr, &[source], "MPSGraph did not create the pooling")
     }
 
 /// Calls the `MPSGraph` framework counterpart for `normalize`.
     #[allow(clippy::too_many_arguments)]
-    #[must_use]
     pub fn normalize(
         &self,
         tensor: &Tensor,
@@ -907,7 +1508,25 @@ impl Graph {
         beta: Option<&Tensor>,
         epsilon: f32,
         name: Option<&str>,
-    ) -> Option<Tensor> {
+    ) -> Result<Tensor> {
+        let inputs = [Some(tensor), Some(mean), Some(variance), gamma, beta]
+            .into_iter()
+            .flatten()
+            .collect::<Vec<_>>();
+        self.check(&inputs)?;
+        checks::float_tensor(tensor, "normalization needs a floating-point tensor")?;
+        for statistic in &inputs[1..] {
+            checks::same_data_type(
+                tensor,
+                statistic,
+                "normalization statistics need the tensor's data type",
+            )?;
+            checks::broadcast_with(
+                tensor,
+                statistic,
+                "normalization statistics must broadcast to the tensor",
+            )?;
+        }
         let name = optional_cstring(name);
         let gamma_ptr = gamma.map_or(ptr::null_mut(), Tensor::as_ptr);
         let beta_ptr = beta.map_or(ptr::null_mut(), Tensor::as_ptr);
@@ -924,14 +1543,12 @@ impl Graph {
                 cstring_ptr(&name),
             )
         };
-        wrap_tensor(ptr)
+        self.output(ptr, &inputs, "MPSGraph did not create the normalization")
     }
 
 /// Calls the `MPSGraph` framework counterpart for `run`.
     pub fn run(&self, feeds: &[Feed<'_>], targets: &[&Tensor]) -> Result<Vec<TensorData>> {
-        if !feeds_match(feeds) {
-            return Err(Error::InvalidShape(FEED_MISMATCH));
-        }
+        self.check_run(feeds, targets)?;
         let feed_tensors = feeds
             .iter()
             .map(|feed| feed.tensor.as_ptr())
@@ -965,6 +1582,17 @@ impl Graph {
         }
     }
 
+    fn check_run(&self, feeds: &[Feed<'_>], targets: &[&Tensor]) -> Result<()> {
+        let feed_tensors = feeds.iter().map(|feed| feed.tensor).collect::<Vec<_>>();
+        self.check_execution(&feed_tensors, targets)?;
+        self.check_no_calls()?;
+        if feeds_match(feeds) {
+            Ok(())
+        } else {
+            Err(Error::InvalidShape(FEED_MISMATCH))
+        }
+    }
+
 /// Calls the `MPSGraph` framework counterpart for `run_with_command_queue`.
     pub fn run_with_command_queue(
         &self,
@@ -972,9 +1600,7 @@ impl Graph {
         feeds: &[Feed<'_>],
         targets: &[&Tensor],
     ) -> Result<Vec<TensorData>> {
-        if !feeds_match(feeds) {
-            return Err(Error::InvalidShape(FEED_MISMATCH));
-        }
+        self.check_run(feeds, targets)?;
         let feed_tensors = feeds
             .iter()
             .map(|feed| feed.tensor.as_ptr())
@@ -1012,16 +1638,14 @@ impl Graph {
     }
 
 /// Calls the `MPSGraph` framework counterpart for `compile`.
-    #[must_use]
     pub fn compile(
         &self,
         device: &MetalDevice,
         feeds: &[FeedDescription<'_>],
         targets: &[&Tensor],
-    ) -> Option<Executable> {
-        if !feed_descriptions_match(feeds) {
-            return None;
-        }
+    ) -> Result<Executable> {
+        self.check_compile(feeds, targets)?;
+        self.check_no_calls()?;
         let feed_tensors = feeds
             .iter()
             .map(|feed| feed.tensor.as_ptr())
@@ -1055,9 +1679,26 @@ impl Graph {
             )
         };
         if ptr.is_null() {
-            None
+            Err(Error::OperationFailed("MPSGraph did not compile the graph"))
         } else {
-            Some(Executable::from_raw(ptr, targets.len()).with_feed_types(feeds))
+            Ok(Executable::from_raw(ptr, targets.len()).with_signature(feeds, targets))
+        }
+    }
+
+    pub(crate) fn check_compile(
+        &self,
+        feeds: &[FeedDescription<'_>],
+        targets: &[&Tensor],
+    ) -> Result<()> {
+        let feed_tensors = feeds.iter().map(|feed| feed.tensor).collect::<Vec<_>>();
+        self.check_execution(&feed_tensors, targets)?;
+        for feed in feeds {
+            checks::shape_to_dims(feed.shape)?;
+        }
+        if feed_descriptions_match(feeds) {
+            Ok(())
+        } else {
+            Err(Error::InvalidShape(FEED_MISMATCH))
         }
     }
 }
@@ -1070,15 +1711,38 @@ pub(crate) fn feed_descriptions_match(feeds: &[FeedDescription<'_>]) -> bool {
         .all(|feed| feed_matches(feed.tensor, feed.shape, feed.data_type))
 }
 
+pub(crate) fn take_tensor_handles(handle: *mut c_void) -> Vec<*mut c_void> {
+    if handle.is_null() {
+        return Vec::new();
+    }
+    // SAFETY: `handle` is a retained tensor-array box created by the Swift bridge.
+    let len = unsafe { ffi::mpsgraph_tensor_array_box_len(handle) };
+    let values = (0..len)
+        // SAFETY: indices are bounded by the just-read length.
+        .map(|index| unsafe { ffi::mpsgraph_tensor_array_box_get(handle, index) })
+        .collect();
+    unsafe { ffi::mpsgraph_object_release(handle) };
+    values
+}
+
+pub(crate) fn release_handles(handles: Vec<*mut c_void>) {
+    for handle in handles {
+        if !handle.is_null() {
+            unsafe { ffi::mpsgraph_object_release(handle) };
+        }
+    }
+}
+
 /// Safe owner for a compiled `MPSGraphExecutable`.
 pub struct Executable {
     ptr: *mut c_void,
     output_count: usize,
     feed_types: Vec<(usize, Vec<usize>, u32)>,
+    output_types: Vec<TypeSignature>,
+    _not_sync: PhantomData<core::cell::Cell<()>>,
 }
 
 unsafe impl Send for Executable {}
-unsafe impl Sync for Executable {}
 
 impl Drop for Executable {
     fn drop(&mut self) {
@@ -1096,10 +1760,12 @@ impl Executable {
             ptr,
             output_count,
             feed_types: Vec::new(),
+            output_types: Vec::new(),
+            _not_sync: PhantomData,
         }
     }
 
-    pub(crate) fn with_feed_types(mut self, feeds: &[FeedDescription<'_>]) -> Self {
+    pub(crate) fn with_signature(mut self, feeds: &[FeedDescription<'_>], targets: &[&Tensor]) -> Self {
         self.feed_types = feeds
             .iter()
             .map(|feed| {
@@ -1110,7 +1776,34 @@ impl Executable {
                 )
             })
             .collect();
+        self.output_types = targets.iter().map(|target| TypeSignature::of(target)).collect();
         self
+    }
+
+    pub(crate) fn callable_signature(&self) -> Option<(Vec<TypeSignature>, Vec<TypeSignature>)> {
+        if self.output_types.is_empty() {
+            return None;
+        }
+        Some((self.input_signature().ok()?, self.output_types.clone()))
+    }
+
+    pub(crate) fn input_signature(&self) -> Result<Vec<TypeSignature>> {
+        self.feed_tensors()
+            .iter()
+            .map(|tensor| {
+                let (_, shape, data_type) = self
+                    .feed_types
+                    .iter()
+                    .find(|(identity, ..)| *identity == tensor.as_ptr() as usize)
+                    .ok_or(Error::Unsupported(
+                        "the compiled input types of this executable are unknown",
+                    ))?;
+                Ok(TypeSignature {
+                    shape: Some(checks::shape_to_dims(shape)?),
+                    data_type: *data_type,
+                })
+            })
+            .collect()
     }
 
     pub(crate) fn check_inputs(&self, inputs: &[&TensorData]) -> Result<()> {

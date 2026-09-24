@@ -44,7 +44,9 @@ fn concat_split_and_topk_execute() {
         .pad(&squared, 0, &[0, 1], &[0, 1], 0.0, Some("pad"))
         .expect("pad");
     let topk = graph.top_k(&input, 2, Some("topk")).expect("topk");
-    let split = graph.split_num(&padded, 2, 1, Some("split"));
+    let split = graph
+        .split_num(&padded, 2, 1, Some("split"))
+        .expect("split");
     assert_eq!(split.len(), 2);
 
     let input_data = TensorData::from_f32_slice(&device, &[1.0, 3.0, 2.0, 4.0, 6.0, 5.0], &[2, 3])

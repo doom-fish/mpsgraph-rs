@@ -10,7 +10,9 @@ fn main() {
     let concat = graph
         .concat_pair(&input, &input, 1, Some("concat"))
         .expect("concat");
-    let split = graph.split_num(&concat, 2, 1, Some("split"));
+    let split = graph
+        .split_num(&concat, 2, 1, Some("split"))
+        .expect("split");
     let stacked = graph
         .stack(&[&split[0], &split[1]], 0, Some("stack"))
         .expect("stack");

@@ -7,6 +7,7 @@
 
 /// Groups `MPSGraph` framework constants for `call`.
 pub mod call;
+mod checks;
 /// Groups `MPSGraph` framework constants for `control_flow`.
 pub mod control_flow;
 /// Groups `MPSGraph` framework constants for `data`.

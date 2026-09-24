@@ -39,14 +39,15 @@ fn main() {
     let gather_axis = graph
         .gather_along_axis(1, &updates, &along_indices, Some("gather_axis"))
         .expect("gather along axis");
-    let gather_axis_tensor = graph
-        .gather_along_axis_tensor(
+    let gather_axis_tensor = unsafe {
+        graph.gather_along_axis_tensor(
             &axis_tensor,
             &updates,
             &along_indices,
             Some("gather_axis_tensor"),
         )
-        .expect("gather along axis tensor");
+    }
+    .expect("gather along axis tensor");
 
     let descriptor = RandomOpDescriptor::new(random_distribution::UNIFORM, data_type::FLOAT32)
         .expect("random descriptor");

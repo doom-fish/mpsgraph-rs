@@ -193,6 +193,24 @@ public func mpsgraph_compilation_descriptor_set_callable(
     return true
 }
 
+@_cdecl("mpsgraph_compilation_descriptor_callable")
+public func mpsgraph_compilation_descriptor_callable(
+    _ handle: UnsafeMutableRawPointer?,
+    _ symbolName: UnsafePointer<CChar>?
+) -> UnsafeMutableRawPointer? {
+    guard #available(macOS 14.1, *) else {
+        return nil
+    }
+    guard let handle, let symbolName else {
+        return nil
+    }
+    let descriptor: MPSGraphCompilationDescriptor = mpsgraph_borrow(handle)
+    guard let executable = descriptor.callables?[String(cString: symbolName)] else {
+        return nil
+    }
+    return Unmanaged.passUnretained(executable).toOpaque()
+}
+
 @_cdecl("mpsgraph_execution_descriptor_new")
 public func mpsgraph_execution_descriptor_new() -> UnsafeMutableRawPointer? {
     mpsgraph_retain(MPSGraphExecutionDescriptor())

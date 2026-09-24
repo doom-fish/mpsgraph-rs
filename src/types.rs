@@ -1,9 +1,11 @@
 use crate::data::TensorData;
 use crate::error::{Error, Result};
 use crate::ffi;
-use crate::graph::Tensor;
+use crate::graph::{take_tensor_handles, Tensor};
 use apple_metal::MetalDevice;
+use core::cell::Cell;
 use core::ffi::c_void;
+use core::marker::PhantomData;
 use core::ptr;
 
 fn release_handle(ptr: &mut *mut c_void) {
@@ -29,26 +31,6 @@ fn copy_optional_signed_shape(
         }
         shape.resize(count, 0);
     }
-}
-
-fn collect_tensor_array_box(handle: *mut c_void) -> Vec<Tensor> {
-    if handle.is_null() {
-        return Vec::new();
-    }
-
-    // SAFETY: `handle` is a retained tensor-array box created by the Swift bridge.
-    let len = unsafe { ffi::mpsgraph_tensor_array_box_len(handle) };
-    let mut tensors = Vec::with_capacity(len);
-    for index in 0..len {
-        // SAFETY: indices are bounded by the just-read length.
-        let tensor = unsafe { ffi::mpsgraph_tensor_array_box_get(handle, index) };
-        if !tensor.is_null() {
-            tensors.push(Tensor::from_raw(tensor));
-        }
-    }
-    let mut box_handle = handle;
-    release_handle(&mut box_handle);
-    tensors
 }
 
 pub(crate) fn collect_tensor_data_array_box(handle: *mut c_void) -> Vec<TensorData> {
@@ -83,7 +65,10 @@ pub(crate) fn collect_shaped_type_array_box(handle: *mut c_void) -> Vec<ShapedTy
         // SAFETY: indices are bounded by the just-read length.
         let value = unsafe { ffi::mpsgraph_shaped_type_array_box_get(handle, index) };
         if !value.is_null() {
-            values.push(ShapedType { ptr: value });
+            values.push(ShapedType {
+                ptr: value,
+                _not_sync: PhantomData,
+            });
         }
     }
     let mut box_handle = handle;
@@ -141,10 +126,10 @@ impl GraphDevice {
 /// Owned wrapper for `MPSGraphShapedType`.
 pub struct ShapedType {
     ptr: *mut c_void,
+    _not_sync: PhantomData<Cell<()>>,
 }
 
 unsafe impl Send for ShapedType {}
-unsafe impl Sync for ShapedType {}
 
 impl Drop for ShapedType {
     fn drop(&mut self) {
@@ -163,7 +148,10 @@ impl ShapedType {
         if ptr.is_null() {
             None
         } else {
-            Some(Self { ptr })
+            Some(Self {
+                ptr,
+                _not_sync: PhantomData,
+            })
         }
     }
 
@@ -223,6 +211,8 @@ impl ShapedType {
 /// Owned wrapper for `MPSGraphOperation`.
 pub struct Operation {
     ptr: *mut c_void,
+    scope: u64,
+    inputs: Vec<usize>,
 }
 
 unsafe impl Send for Operation {}
@@ -236,8 +226,16 @@ impl Drop for Operation {
 
 impl Operation {
     #[must_use]
-    pub(crate) const fn from_raw(ptr: *mut c_void) -> Self {
-        Self { ptr }
+    pub(crate) const fn from_raw(ptr: *mut c_void, scope: u64, inputs: Vec<usize>) -> Self {
+        Self { ptr, scope, inputs }
+    }
+
+    pub(crate) const fn scope(&self) -> u64 {
+        self.scope
+    }
+
+    pub(crate) fn inputs(&self) -> &[usize] {
+        &self.inputs
     }
 
 /// Mirrors the `MPSGraph` framework constant `fn`.
@@ -269,7 +267,11 @@ impl Tensor {
         if ptr.is_null() {
             None
         } else {
-            Some(Operation { ptr })
+            Some(Operation {
+                ptr,
+                scope: self.scope(),
+                inputs: vec![self.as_ptr() as usize],
+            })
         }
     }
 }
@@ -288,6 +290,10 @@ impl TensorData {
     }
 }
 
-pub(crate) fn collect_owned_tensors(handle: *mut c_void) -> Vec<Tensor> {
-    collect_tensor_array_box(handle)
+pub(crate) fn collect_owned_tensors(handle: *mut c_void, scope: u64) -> Vec<Tensor> {
+    take_tensor_handles(handle)
+        .into_iter()
+        .filter(|tensor| !tensor.is_null())
+        .map(|tensor| Tensor::from_raw(tensor, scope))
+        .collect()
 }

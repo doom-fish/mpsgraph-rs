@@ -76,9 +76,13 @@ fn assert_close(name: &str, actual: &[f32], expected: &[f32]) {
     );
 }
 
-fn assert_availability<T>(name: &str, value: Option<T>, available: bool) -> Option<T> {
-    assert_eq!(value.is_some(), available, "{name} availability mismatch");
-    value
+fn assert_availability<T>(
+    name: &str,
+    value: apple_mpsgraph::Result<T>,
+    available: bool,
+) -> Option<T> {
+    assert_eq!(value.is_ok(), available, "{name} availability mismatch");
+    value.ok()
 }
 
 #[test]
@@ -123,16 +127,16 @@ fn specialized_constants_types_and_descriptors_round_trip() {
             weights_layout: tensor_named_data_layout::DHWIO,
             ..Default::default()
         })
-        .is_some(),
+        .is_ok(),
         macos_version_at_least(13, 2)
     );
     assert!(
         DepthwiseConvolution2DDescriptor::new(DepthwiseConvolution2DDescriptorInfo::default())
-            .is_some()
+            .is_ok()
     );
     assert_eq!(
         DepthwiseConvolution3DDescriptor::new(DepthwiseConvolution3DDescriptorInfo::default())
-            .is_some(),
+            .is_ok(),
         macos_version_at_least(12, 0)
     );
     assert_eq!(
@@ -140,15 +144,15 @@ fn specialized_constants_types_and_descriptors_round_trip() {
             scaling_mode: fft_scaling_mode::UNITARY,
             ..Default::default()
         })
-        .is_some(),
+        .is_ok(),
         macos_version_at_least(14, 0)
     );
     assert_eq!(
-        ImToColDescriptor::new(ImToColDescriptorInfo::default()).is_some(),
+        ImToColDescriptor::new(ImToColDescriptorInfo::default()).is_ok(),
         macos_version_at_least(14, 0)
     );
     assert_eq!(
-        Pooling4DDescriptor::new(Pooling4DDescriptorInfo::default()).is_some(),
+        Pooling4DDescriptor::new(Pooling4DDescriptorInfo::default()).is_ok(),
         macos_version_at_least(12, 0)
     );
     assert_eq!(
@@ -156,11 +160,11 @@ fn specialized_constants_types_and_descriptors_round_trip() {
             return_indices_mode: pooling_return_indices_mode::GLOBAL_FLATTEN_4D,
             ..Default::default()
         })
-        .is_some(),
+        .is_ok(),
         macos_version_at_least(12, 2)
     );
     assert_eq!(
-        CreateSparseDescriptor::new(sparse_storage_type::COO, data_type::FLOAT32).is_some(),
+        CreateSparseDescriptor::new(sparse_storage_type::COO, data_type::FLOAT32).is_ok(),
         macos_version_at_least(12, 0)
     );
     assert_eq!(
@@ -168,7 +172,7 @@ fn specialized_constants_types_and_descriptors_round_trip() {
             reduction_mode: reduction_mode::ARGUMENT_MAX,
             ..Default::default()
         })
-        .is_some(),
+        .is_ok(),
         macos_version_at_least(12, 0)
     );
 }
@@ -345,15 +349,17 @@ fn specialized_ops_compute_expected_values() {
     );
     expect_floats(
         "resize nearest",
-        graph.resize_nearest(
-            &image,
-            &size_tensor,
-            resize_nearest_rounding_mode::ROUND_PREFER_CEIL,
-            true,
-            false,
-            tensor_named_data_layout::NHWC,
-            None,
-        ),
+        unsafe {
+            graph.resize_nearest(
+                &image,
+                &size_tensor,
+                resize_nearest_rounding_mode::ROUND_PREFER_CEIL,
+                true,
+                false,
+                tensor_named_data_layout::NHWC,
+                None,
+            )
+        },
         macos_version_at_least(13, 0),
         vec![2.0],
     );
@@ -573,15 +579,17 @@ fn specialized_ops_compute_expected_values() {
 
     if let Some(selected) = assert_availability(
         "non maximum suppression",
-        graph.non_maximum_suppression(
-            &boxes,
-            &scores,
-            0.5,
-            0.1,
-            false,
-            non_maximum_suppression_coordinate_mode::CORNERS_HEIGHT_FIRST,
-            None,
-        ),
+        unsafe {
+            graph.non_maximum_suppression(
+                &boxes,
+                &scores,
+                0.5,
+                0.1,
+                false,
+                non_maximum_suppression_coordinate_mode::CORNERS_HEIGHT_FIRST,
+                None,
+            )
+        },
         macos_version_at_least(14, 0),
     ) {
         assert_eq!(selected.data_type(), data_type::INT32);

@@ -729,6 +729,10 @@ unsafe extern "C" {
         symbol_name: *const c_char,
         executable_handle: *mut c_void,
     ) -> bool;
+    pub fn mpsgraph_compilation_descriptor_callable(
+        handle: *mut c_void,
+        symbol_name: *const c_char,
+    ) -> *mut c_void;
 /// Calls the `MPSGraph` framework counterpart for `mpsgraph_graph_call_symbol`.
     pub fn mpsgraph_graph_call_symbol(
         graph_handle: *mut c_void,
@@ -1077,6 +1081,7 @@ unsafe extern "C" {
         dependent_callback: Option<TensorArrayCallback>,
         dependent_context: *mut c_void,
         name: *const c_char,
+        failed: *mut bool,
     ) -> *mut c_void;
 /// Calls the `MPSGraph` framework counterpart for `mpsgraph_graph_if_then_else`.
     pub fn mpsgraph_graph_if_then_else(
@@ -1087,6 +1092,7 @@ unsafe extern "C" {
         else_callback: Option<TensorArrayCallback>,
         else_context: *mut c_void,
         name: *const c_char,
+        failed: *mut bool,
     ) -> *mut c_void;
 /// Calls the `MPSGraph` framework counterpart for `mpsgraph_graph_while_loop`.
     pub fn mpsgraph_graph_while_loop(
@@ -1098,6 +1104,7 @@ unsafe extern "C" {
         after_callback: Option<TensorArrayInputCallback>,
         after_context: *mut c_void,
         name: *const c_char,
+        failed: *mut bool,
     ) -> *mut c_void;
 /// Calls the `MPSGraph` framework counterpart for `mpsgraph_graph_for_loop`.
     pub fn mpsgraph_graph_for_loop(
@@ -1110,6 +1117,7 @@ unsafe extern "C" {
         body_callback: Option<ForBodyCallback>,
         body_context: *mut c_void,
         name: *const c_char,
+        failed: *mut bool,
     ) -> *mut c_void;
 /// Calls the `MPSGraph` framework counterpart for `mpsgraph_graph_for_loop_iterations`.
     pub fn mpsgraph_graph_for_loop_iterations(
@@ -1120,5 +1128,6 @@ unsafe extern "C" {
         body_callback: Option<ForBodyCallback>,
         body_context: *mut c_void,
         name: *const c_char,
+        failed: *mut bool,
     ) -> *mut c_void;
 }

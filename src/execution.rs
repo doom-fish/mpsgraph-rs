@@ -1,12 +1,16 @@
 use crate::data::TensorData;
 use crate::error::{Error, Result};
 use crate::ffi;
-use crate::graph::{feed_descriptions_match, Executable, FeedDescription, Graph, Tensor};
+use crate::graph::{
+    take_tensor_handles, CallSignature, Executable, FeedDescription, Graph, Tensor, TypeSignature,
+};
 use crate::types::{
     collect_owned_tensors, collect_shaped_type_array_box, collect_tensor_data_array_box, ShapedType,
 };
 use apple_metal::{CommandQueue, MetalDevice};
+use core::cell::{Cell, RefCell};
 use core::ffi::c_void;
+use core::marker::PhantomData;
 use core::ptr;
 use core::time::Duration;
 use std::ffi::CString;
@@ -89,13 +93,29 @@ pub mod deployment_platform {
     pub const VISIONOS: u64 = 3;
 }
 
+type CallableTypes = (Vec<TypeSignature>, Vec<TypeSignature>);
+
+struct Callable {
+    symbol: String,
+    executable: *mut c_void,
+    signature: Option<CallableTypes>,
+}
+
+unsafe impl Send for Callable {}
+
+impl Drop for Callable {
+    fn drop(&mut self) {
+        release_handle(&mut self.executable);
+    }
+}
+
 /// Safe owner for `MPSGraphCompilationDescriptor`.
 pub struct CompilationDescriptor {
     ptr: *mut c_void,
+    callables: RefCell<Vec<Callable>>,
 }
 
 unsafe impl Send for CompilationDescriptor {}
-unsafe impl Sync for CompilationDescriptor {}
 
 impl Drop for CompilationDescriptor {
     fn drop(&mut self) {
@@ -112,7 +132,35 @@ impl CompilationDescriptor {
         if ptr.is_null() {
             None
         } else {
-            Some(Self { ptr })
+            Some(Self::from_raw(ptr))
+        }
+    }
+
+    const fn from_raw(ptr: *mut c_void) -> Self {
+        Self {
+            ptr,
+            callables: RefCell::new(Vec::new()),
+        }
+    }
+
+    pub(crate) fn check_call(&self, call: &CallSignature) -> Result<()> {
+        let missing = || Error::MissingCallable(call.symbol.clone());
+        let symbol = CString::new(call.symbol.as_str()).map_err(|_| missing())?;
+        let current =
+            unsafe { ffi::mpsgraph_compilation_descriptor_callable(self.ptr, symbol.as_ptr()) };
+        if current.is_null() {
+            return Err(missing());
+        }
+        let callables = self.callables.borrow();
+        let compatible = callables
+            .iter()
+            .find(|callable| callable.symbol == call.symbol && callable.executable == current)
+            .and_then(|callable| callable.signature.as_ref())
+            .is_some_and(|(inputs, outputs)| *inputs == call.inputs && *outputs == call.outputs);
+        if compatible {
+            Ok(())
+        } else {
+            Err(missing())
         }
     }
 
@@ -228,23 +276,31 @@ impl CompilationDescriptor {
                 executable_ptr,
             )
         };
-        if ok {
-            Ok(())
-        } else {
-            Err(Error::OperationFailed(
+        if !ok {
+            return Err(Error::OperationFailed(
                 "failed to set compilation descriptor callable",
-            ))
+            ));
         }
+        let mut callables = self.callables.borrow_mut();
+        callables.retain(|callable| callable.symbol.as_bytes() != symbol_name.as_bytes());
+        if let Some(executable) = executable {
+            callables.push(Callable {
+                symbol: symbol_name.to_string_lossy().into_owned(),
+                executable: unsafe { ffi::mpsgraph_object_retain(executable.as_ptr()) },
+                signature: executable.callable_signature(),
+            });
+        }
+        Ok(())
     }
 }
 
 /// Safe owner for `MPSGraphExecutionDescriptor`.
 pub struct ExecutionDescriptor {
     ptr: *mut c_void,
+    _not_sync: PhantomData<Cell<()>>,
 }
 
 unsafe impl Send for ExecutionDescriptor {}
-unsafe impl Sync for ExecutionDescriptor {}
 
 impl Drop for ExecutionDescriptor {
     fn drop(&mut self) {
@@ -261,7 +317,10 @@ impl ExecutionDescriptor {
         if ptr.is_null() {
             None
         } else {
-            Some(Self { ptr })
+            Some(Self {
+                ptr,
+                _not_sync: PhantomData,
+            })
         }
     }
 
@@ -298,7 +357,7 @@ impl ExecutionDescriptor {
         if ptr.is_null() {
             None
         } else {
-            Some(CompilationDescriptor { ptr })
+            Some(CompilationDescriptor::from_raw(ptr))
         }
     }
 
@@ -325,10 +384,10 @@ impl ExecutionDescriptor {
 /// Safe owner for `MPSGraphExecutableExecutionDescriptor`.
 pub struct ExecutableExecutionDescriptor {
     ptr: *mut c_void,
+    _not_sync: PhantomData<Cell<()>>,
 }
 
 unsafe impl Send for ExecutableExecutionDescriptor {}
-unsafe impl Sync for ExecutableExecutionDescriptor {}
 
 impl Drop for ExecutableExecutionDescriptor {
     fn drop(&mut self) {
@@ -345,7 +404,10 @@ impl ExecutableExecutionDescriptor {
         if ptr.is_null() {
             None
         } else {
-            Some(Self { ptr })
+            Some(Self {
+                ptr,
+                _not_sync: PhantomData,
+            })
         }
     }
 
@@ -380,10 +442,10 @@ impl ExecutableExecutionDescriptor {
 /// Safe owner for `MPSGraphExecutableSerializationDescriptor`.
 pub struct ExecutableSerializationDescriptor {
     ptr: *mut c_void,
+    _not_sync: PhantomData<Cell<()>>,
 }
 
 unsafe impl Send for ExecutableSerializationDescriptor {}
-unsafe impl Sync for ExecutableSerializationDescriptor {}
 
 impl Drop for ExecutableSerializationDescriptor {
     fn drop(&mut self) {
@@ -400,7 +462,10 @@ impl ExecutableSerializationDescriptor {
         if ptr.is_null() {
             None
         } else {
-            Some(Self { ptr })
+            Some(Self {
+                ptr,
+                _not_sync: PhantomData,
+            })
         }
     }
 
@@ -438,6 +503,9 @@ impl ExecutableSerializationDescriptor {
 
 /// Calls the `MPSGraph` framework counterpart for `set_deployment_platform`.
     pub fn set_deployment_platform(&self, value: u64) -> Result<()> {
+        if value > deployment_platform::VISIONOS {
+            return Err(Error::InvalidArgument("unknown MPSGraphDeploymentPlatform"));
+        }
         // SAFETY: `self.ptr` is a live descriptor handle.
         let ok = unsafe {
             ffi::mpsgraph_executable_serialization_descriptor_set_deployment_platform(
@@ -505,20 +573,32 @@ impl Graph {
     pub fn placeholder_tensors(&self) -> Vec<Tensor> {
         // SAFETY: `self` owns a live graph handle.
         let box_handle = unsafe { ffi::mpsgraph_graph_placeholder_tensors(self.as_ptr()) };
-        collect_owned_tensors(box_handle)
+        let mut tensors = Vec::new();
+        for handle in take_tensor_handles(box_handle) {
+            match self.placeholder_scope(handle) {
+                Some(scope) => tensors.push(Tensor::from_raw(handle, scope)),
+                None if handle.is_null() => {}
+                None => {
+                    unsafe { ffi::mpsgraph_object_release(handle) };
+                }
+            }
+        }
+        tensors
     }
 
     /// Compile the graph with an optional compilation descriptor.
-    #[must_use]
     pub fn compile_with_descriptor(
         &self,
         device: Option<&MetalDevice>,
         feeds: &[FeedDescription<'_>],
         targets: &[&Tensor],
         descriptor: Option<&CompilationDescriptor>,
-    ) -> Option<Executable> {
-        if !feed_descriptions_match(feeds) {
-            return None;
+    ) -> Result<Executable> {
+        self.check_compile(feeds, targets)?;
+        for call in self.calls() {
+            descriptor
+                .ok_or_else(|| Error::MissingCallable(call.symbol.clone()))?
+                .check_call(&call)?;
         }
         let feed_tensors = feeds
             .iter()
@@ -556,14 +636,56 @@ impl Graph {
             )
         };
         if ptr.is_null() {
-            None
+            Err(Error::OperationFailed("MPSGraph did not compile the graph"))
         } else {
-            Some(Executable::from_raw(ptr, targets.len()).with_feed_types(feeds))
+            Ok(Executable::from_raw(ptr, targets.len()).with_signature(feeds, targets))
         }
     }
 }
 
+fn check_deployment(descriptor: &ExecutableSerializationDescriptor) -> Result<()> {
+    let minimum = match descriptor.deployment_platform() {
+        deployment_platform::MACOS => [14, 0, 0],
+        deployment_platform::IOS | deployment_platform::TVOS => [17, 0, 0],
+        deployment_platform::VISIONOS => [1, 1, 0],
+        _ => return Err(Error::InvalidArgument("unknown MPSGraphDeploymentPlatform")),
+    };
+    let target = descriptor.minimum_deployment_target()?;
+    let parts = target
+        .split('.')
+        .map(|part| part.parse::<u64>().ok())
+        .collect::<Option<Vec<_>>>()
+        .ok_or(Error::InvalidArgument(
+            "the minimum deployment target must be a dotted version number",
+        ))?;
+    let mut version = [0_u64; 3];
+    for (slot, part) in version.iter_mut().zip(&parts) {
+        *slot = *part;
+    }
+    if version < minimum {
+        return Err(Error::InvalidArgument(
+            "the minimum deployment target is below MPSGraph's minimum for the platform (macOS 14, iOS and tvOS 17, visionOS 1.1)",
+        ));
+    }
+    Ok(())
+}
+
 impl Executable {
+    fn check_input_types(&self, input_types: &[&ShapedType]) -> Result<()> {
+        let expected = self.input_signature()?;
+        let matches = input_types.len() == expected.len()
+            && input_types.iter().zip(&expected).all(|(actual, expected)| {
+                actual.data_type() == expected.data_type && actual.shape() == expected.shape
+            });
+        if matches {
+            Ok(())
+        } else {
+            Err(Error::InvalidShape(
+                "input types must match the executable's compiled feeds",
+            ))
+        }
+    }
+
     /// Return the executable's `MPSGraphOptions` bitmask.
     #[must_use]
     pub fn options(&self) -> u64 {
@@ -587,7 +709,7 @@ impl Executable {
     pub fn feed_tensors(&self) -> Vec<Tensor> {
         // SAFETY: `self` owns a live executable handle.
         let box_handle = unsafe { ffi::mpsgraph_executable_feed_tensors(self.as_ptr()) };
-        collect_owned_tensors(box_handle)
+        collect_owned_tensors(box_handle, 0)
     }
 
     /// Return target tensors if this executable was compiled from a graph.
@@ -595,7 +717,7 @@ impl Executable {
     pub fn target_tensors(&self) -> Vec<Tensor> {
         // SAFETY: `self` owns a live executable handle.
         let box_handle = unsafe { ffi::mpsgraph_executable_target_tensors(self.as_ptr()) };
-        collect_owned_tensors(box_handle)
+        collect_owned_tensors(box_handle, 0)
     }
 
     /// Specialize the executable for the provided input types.
@@ -605,6 +727,7 @@ impl Executable {
         input_types: &[&ShapedType],
         descriptor: Option<&CompilationDescriptor>,
     ) -> Result<()> {
+        self.check_input_types(input_types)?;
         let input_type_handles = input_types
             .iter()
             .map(|value| value.as_ptr())
@@ -636,6 +759,7 @@ impl Executable {
         input_types: &[&ShapedType],
         descriptor: Option<&CompilationDescriptor>,
     ) -> Result<Vec<ShapedType>> {
+        self.check_input_types(input_types)?;
         let input_type_handles = input_types
             .iter()
             .map(|value| value.as_ptr())
@@ -765,6 +889,9 @@ impl Executable {
     ) -> Result<()> {
         let path =
             CString::new(path).map_err(|_| Error::OperationFailed("package path contained NUL"))?;
+        if let Some(descriptor) = descriptor {
+            check_deployment(descriptor)?;
+        }
         let descriptor_ptr =
             descriptor.map_or(ptr::null_mut(), ExecutableSerializationDescriptor::as_ptr);
         // SAFETY: the CString stays alive for the duration of the call.
@@ -794,7 +921,7 @@ impl Executable {
         let output_count = {
             // SAFETY: `ptr` is a live executable handle returned just above.
             let box_handle = unsafe { ffi::mpsgraph_executable_target_tensors(ptr) };
-            collect_owned_tensors(box_handle).len()
+            collect_owned_tensors(box_handle, 0).len()
         };
         Ok(Self::from_raw(ptr, output_count))
     }

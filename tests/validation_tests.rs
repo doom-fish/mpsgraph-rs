@@ -3,7 +3,6 @@ use apple_mpsgraph::{
     data_type, execution_stage, Error, ExecutableExecutionDescriptor, Feed, FeedDescription, Graph,
     ReductionAxesOp, ReductionAxisOp, ShapedType, Tensor, TensorData,
 };
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 fn device() -> MetalDevice {
@@ -24,27 +23,27 @@ fn values(count: u8) -> Vec<f32> {
 fn shape_and_axis_mistakes_are_refused_before_mpsgraph() {
     let graph = Graph::new().expect("graph");
     let x = placeholder(&graph, &[2, 3], data_type::FLOAT32);
-    assert!(graph.reshape(&x, &[5], None).is_none());
-    assert!(graph.reshape(&x, &[0], None).is_none());
-    assert!(graph.reshape(&x, &[usize::MAX, 2], None).is_none());
+    assert!(graph.reshape(&x, &[5], None).is_err());
+    assert!(graph.reshape(&x, &[0], None).is_err());
+    assert!(graph.reshape(&x, &[usize::MAX, 2], None).is_err());
     assert_eq!(
         graph.reshape(&x, &[3, 2], None).expect("reshape").shape(),
         Some(vec![3, 2])
     );
-    assert!(graph.reduction_sum(&x, &[5], None).is_none());
+    assert!(graph.reduction_sum(&x, &[5], None).is_err());
     assert_eq!(
         graph.reduction_sum(&x, &[1], None).expect("sum").shape(),
         Some(vec![2, 1])
     );
     assert!(graph
         .reduce_axes(ReductionAxesOp::Sum, &x, &[2], None)
-        .is_none());
+        .is_err());
     assert!(graph
         .reduce_axis(ReductionAxisOp::Maximum, &x, 2, None)
-        .is_none());
-    assert!(graph.transpose(&x, &[0], None).is_none());
-    assert!(graph.transpose(&x, &[0, 0], None).is_none());
-    assert!(graph.transpose(&x, &[0, 5], None).is_none());
+        .is_err());
+    assert!(graph.transpose(&x, &[0], None).is_err());
+    assert!(graph.transpose(&x, &[0, 0], None).is_err());
+    assert!(graph.transpose(&x, &[0, 5], None).is_err());
     assert_eq!(
         graph
             .transpose(&x, &[1, 0], None)
@@ -52,16 +51,16 @@ fn shape_and_axis_mistakes_are_refused_before_mpsgraph() {
             .shape(),
         Some(vec![3, 2])
     );
-    assert!(graph.slice(&x, 5, 0, 1, None).is_none());
-    assert!(graph.slice(&x, 1, -5, 1, None).is_none());
-    assert!(graph.slice(&x, 1, 0, -1, None).is_none());
-    assert!(graph.slice(&x, 1, 2, 2, None).is_none());
+    assert!(graph.slice(&x, 5, 0, 1, None).is_err());
+    assert!(graph.slice(&x, 1, -5, 1, None).is_err());
+    assert!(graph.slice(&x, 1, 0, -1, None).is_err());
+    assert!(graph.slice(&x, 1, 2, 2, None).is_err());
     assert_eq!(
         graph.slice(&x, 1, -1, 1, None).expect("slice").shape(),
         Some(vec![2, 1])
     );
-    assert!(graph.softmax(&x, 7, None).is_none());
-    assert!(graph.softmax(&x, -3, None).is_none());
+    assert!(graph.softmax(&x, 7, None).is_err());
+    assert!(graph.softmax(&x, -3, None).is_err());
     let softmax = graph
         .softmax(&x, -1, None)
         .expect("softmax over the last axis");
@@ -81,8 +80,8 @@ fn shape_and_axis_mistakes_are_refused_before_mpsgraph() {
             .all(|(actual, expected)| (actual - expected).abs() < 1e-5),
         "{probabilities:?}"
     );
-    assert!(graph.broadcast(&x, &[4, 5], None).is_none());
-    assert!(graph.broadcast(&x, &[3], None).is_none());
+    assert!(graph.broadcast(&x, &[4, 5], None).is_err());
+    assert!(graph.broadcast(&x, &[3], None).is_err());
     assert_eq!(
         graph
             .broadcast(&x, &[4, 2, 3], None)
@@ -90,16 +89,16 @@ fn shape_and_axis_mistakes_are_refused_before_mpsgraph() {
             .shape(),
         Some(vec![4, 2, 3])
     );
-    assert!(graph.split_num(&x, 0, 1, None).is_empty());
-    assert!(graph.split_num(&x, 4, 1, None).is_empty());
-    let uneven = graph.split_num(&x, 2, 1, None);
+    assert!(graph.split_num(&x, 0, 1, None).is_err());
+    assert!(graph.split_num(&x, 4, 1, None).is_err());
+    let uneven = graph.split_num(&x, 2, 1, None).expect("uneven split");
     assert_eq!(
         uneven.iter().map(Tensor::shape).collect::<Vec<_>>(),
         vec![Some(vec![2, 2]), Some(vec![2, 1])]
     );
-    assert!(graph.split_sizes(&x, &[1, 1], 1, None).is_empty());
-    assert!(graph.split_sizes(&x, &[0, 3], 1, None).is_empty());
-    let sized = graph.split_sizes(&x, &[1, 2], 1, None);
+    assert!(graph.split_sizes(&x, &[1, 1], 1, None).is_err());
+    assert!(graph.split_sizes(&x, &[0, 3], 1, None).is_err());
+    let sized = graph.split_sizes(&x, &[1, 2], 1, None).expect("sized split");
     assert_eq!(
         sized.iter().map(Tensor::shape).collect::<Vec<_>>(),
         vec![Some(vec![2, 1]), Some(vec![2, 2])]
@@ -113,8 +112,8 @@ fn binary_and_matrix_operands_must_be_compatible() {
     let wide = placeholder(&graph, &[4, 5], data_type::FLOAT32);
     let half = placeholder(&graph, &[2, 3], data_type::FLOAT16);
     let row = placeholder(&graph, &[3], data_type::FLOAT32);
-    assert!(graph.addition(&x, &wide, None).is_none());
-    assert!(graph.multiplication(&x, &half, None).is_none());
+    assert!(graph.addition(&x, &wide, None).is_err());
+    assert!(graph.multiplication(&x, &half, None).is_err());
     assert_eq!(
         graph
             .addition(&x, &row, None)
@@ -122,13 +121,13 @@ fn binary_and_matrix_operands_must_be_compatible() {
             .shape(),
         Some(vec![2, 3])
     );
-    assert!(graph.matrix_multiplication(&x, &x, None).is_none());
-    assert!(graph.matrix_multiplication(&x, &row, None).is_none());
+    assert!(graph.matrix_multiplication(&x, &x, None).is_err());
+    assert!(graph.matrix_multiplication(&x, &row, None).is_err());
     let batched = placeholder(&graph, &[2, 2, 3], data_type::FLOAT32);
     let other_batch = placeholder(&graph, &[3, 3, 4], data_type::FLOAT32);
     assert!(graph
         .matrix_multiplication(&batched, &other_batch, None)
-        .is_none());
+        .is_err());
     let tall = placeholder(&graph, &[3, 4], data_type::FLOAT32);
     assert_eq!(
         graph
@@ -166,7 +165,7 @@ fn feeds_must_match_their_placeholders() {
             &[FeedDescription::new(&x, &[5], data_type::FLOAT32)],
             &[&doubled]
         )
-        .is_none());
+        .is_err());
     let good = TensorData::from_f32_slice(&device, &values(6), &[2, 3]).expect("data");
     let results = graph
         .run(&[Feed::new(&x, &good)], &[&doubled])
@@ -285,25 +284,15 @@ fn async_runs_expose_results_only_after_completion() {
 }
 
 #[test]
-fn shaped_type_shape_reads_stay_consistent_while_another_thread_resizes() {
+fn shaped_type_shapes_round_trip() {
     let short = [3_isize];
     let long = [1_isize, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
     let shaped = ShapedType::new(Some(&short), data_type::FLOAT32).expect("shaped type");
-    let done = AtomicBool::new(false);
-    std::thread::scope(|scope| {
-        scope.spawn(|| {
-            for round in 0..20_000 {
-                let shape: &[isize] = if round % 2 == 0 { &long } else { &short };
-                shaped.set_shape(Some(shape)).expect("set shape");
-            }
-            done.store(true, Ordering::Release);
-        });
-        let mut reads = 0_u32;
-        while !done.load(Ordering::Acquire) || reads == 0 {
-            let shape = shaped.shape().expect("ranked shape");
-            assert!(shape == short || shape == long, "{shape:?}");
-            reads += 1;
-        }
-    });
-    assert_eq!(shaped.shape(), Some(short.to_vec()));
+    for round in 0..64 {
+        let shape: &[isize] = if round % 2 == 0 { &long } else { &short };
+        shaped.set_shape(Some(shape)).expect("set shape");
+        assert_eq!(shaped.shape().as_deref(), Some(shape));
+    }
+    shaped.set_shape(None).expect("unranked");
+    assert_eq!(shaped.shape(), None);
 }

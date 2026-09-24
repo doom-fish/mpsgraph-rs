@@ -250,12 +250,12 @@ fn oversized_dimensions_fail_instead_of_trapping() {
     let graph = Graph::new().expect("graph");
     assert!(graph
         .placeholder(Some(&[usize::MAX]), data_type::FLOAT32, None)
-        .is_none());
+        .is_err());
     assert!(graph
         .constant_scalar_shaped(1.0, &[usize::MAX, 0], data_type::FLOAT32)
-        .is_none());
+        .is_err());
     assert!(TensorData::from_bytes(&device, &[], &[usize::MAX, 0], data_type::FLOAT32).is_none());
-    assert!(graph.placeholder(Some(&[2]), 0x1234, None).is_none());
+    assert!(graph.placeholder(Some(&[2]), 0x1234, None).is_err());
     let input = graph
         .placeholder(Some(&[2, 3]), data_type::FLOAT32, None)
         .expect("placeholder");
