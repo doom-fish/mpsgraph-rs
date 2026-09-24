@@ -1,6 +1,6 @@
 use apple_metal::{
-    resource_options, MetalBuffer, MetalDevice, MetalTensor, MetalTensorDataType, MetalTensorUsage,
-    TensorDescriptor,
+    gpu_family, resource_options, MetalBuffer, MetalDevice, MetalTensor, MetalTensorDataType,
+    MetalTensorUsage, TensorDescriptor,
 };
 use apple_mpsgraph::{data_type, data_type_bits, data_type_size, Error, Feed, Graph, TensorData};
 use core::ffi::{c_char, c_void};
@@ -263,6 +263,13 @@ fn metal_tensors_alias_as_tensor_data_on_macos_26() {
         return;
     }
     let device = device();
+    if !device.supports_family(gpu_family::METAL4) {
+        eprintln!(
+            "skipping: {} has no Metal 4 support for MTLTensor",
+            device.name()
+        );
+        return;
+    }
     let values = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
     let usage =
         MetalTensorUsage(MetalTensorUsage::COMPUTE.0 | MetalTensorUsage::MACHINE_LEARNING.0);
